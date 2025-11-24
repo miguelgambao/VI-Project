@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Crash Map with Zoom & Scalable Dots</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson@3"></script>
+<style>
+    body { margin: 0; background: #111; }
+    svg { width: 100vw; height: 100vh; display: block; cursor: grab; }
+    .dot { fill: red; }
+    .country { fill: #222; stroke: #444; }
+</style>
+</head>
+<body>
+
+<script>
+const width = window.innerWidth;
+const height = window.innerHeight;
+
+const svg = d3.select("body").append("svg");
+
+const projection = d3.geoNaturalEarth1()
+    .scale(width / 6)
+    .translate([width / 2, height / 2]);
+
+const path = d3.geoPath().projection(projection);
+
+// Create a container group for zooming
+const g = svg.append("g");
+
+// Zoom behavior
+const zoom = d3.zoom()
+    .scaleExtent([1, 8])
+    .on("zoom", (event) => {
+        const {transform} = event;
+        g.attr("transform", transform);
+
+        // Scale dots inversely with zoom
+        g.selectAll("circle.dot")
+            .attr("r", 3 / transform.k);
+    });
+
+svg.call(zoom);
+
+// Load world map + CSV
+Promise.all([
+    fetch("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(r => r.json()),
+    d3.dsv(";", "crashes_data_test.csv")
+])
+.then(([worldData, crashData]) => {
+
+    console.log("CSV Loaded (rows):", crashData.length);
+    if (crashData.length > 0) console.log("CSV First Row Keys:", Object.keys(crashData[0]));
+
+    // Detect Lat/Lon columns
+    const keys = Object.keys(crashData[0]);
+    const latKey = keys.find(k => k.toLowerCase().includes("lat"));
+    const lonKey = keys.find(k => k.toLowerCase().includes("lon"));
+
+    console.log("Detected Latitude Column:", latKey);
+    console.log("Detected Longitude Column:", lonKey);
+
+    if (!latKey || !lonKey) {
+        console.error("❌ Could not detect latitude/longitude columns. Keys found:", keys);
+        return;
+    }
+
+    // Clean & parse coordinates
+    const locations = crashData.map(d => {
+        let rawLat = (d[latKey] ?? "").toString().trim().replace(",", ".");
+        let rawLon = (d[lonKey] ?? "").toString().trim().replace(",", ".");
+
+        rawLat = rawLat.replace(/[^\d.\-]/g, "");
+        rawLon = rawLon.replace(/[^\d.\-]/g, "");
+
+        const lat = parseFloat(rawLat);
+        const lon = parseFloat(rawLon);
+
+        return { lat, lon };
+    }).filter(d =>
+        !isNaN(d.lat) && !isNaN(d.lon) &&
+        d.lat >= -90 && d.lat <= 90 &&
+        d.lon >= -180 && d.lon <= 180
+    );
+
+    console.log("Parsed crash points:", locations.length);
+
+    // Draw map
+    const countries = topojson.feature(worldData, worldData.objects.countries);
+
+    g.append("path")
+        .datum(countries)
+        .attr("d", path)
+        .attr("class", "country");
+
+    // Draw crash points
+    g.selectAll("circle.dot")
+        .data(locations)
+        .join("circle")
+        .attr("class", "dot")
+        .attr("r", 3) // initial radius
+        .attr("cx", d => projection([d.lon, d.lat])[0])
+        .attr("cy", d => projection([d.lon, d.lat])[1]);
+
+})
+.catch(err => console.error("Error loading data:", err));
+</script>
+
+</body>
+</html>
