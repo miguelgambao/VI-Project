@@ -28,6 +28,13 @@ const tooltip = d3
   .attr("class", "tooltip")
   .style("display", "none");
 
+// dot sizing configuration (these are desired on-screen radii in pixels).
+// We convert them to element `r` by dividing by the current zoom scale so
+// group scaling doesn't amplify sizes unexpectedly.
+const DOT_SCREEN_BASE = 1.3; // base on-screen radius at k ~= 1
+const DOT_SCREEN_MIN = 0.5; // minimum on-screen radius in px
+const DOT_SCREEN_MAX = 20; // maximum on-screen radius in px (visual cap)
+
 let _currentZoomK = 1;
 const zoom = d3
   .zoom()
@@ -36,9 +43,15 @@ const zoom = d3
     const { transform } = event;
     _currentZoomK = transform.k;
     g.attr("transform", transform);
-    // scale dots and routes by 1/k so they maintain visual proportion when zooming
-    // cap the dot radius so they don't become too large when zoomed out
-    g.selectAll("circle.dot").attr("r", Math.min(2.4 / transform.k, 1.6));
+    // Compute desired on-screen radius (use a gentle sqrt(k) growth), clamp,
+    // then divide by k to get the SVG `r` value because the group itself is
+    // scaled by `k` via the transform.
+    const screenR = Math.max(
+      DOT_SCREEN_MIN,
+      Math.min(DOT_SCREEN_BASE * Math.sqrt(transform.k), DOT_SCREEN_MAX)
+    );
+    const elR = screenR / transform.k;
+    g.selectAll("circle.dot").attr("r", elR);
     g.selectAll("path.route").style("stroke-width", 0.6 / transform.k + "px");
   });
 svg.call(zoom);
@@ -730,7 +743,13 @@ function drawDots() {
       enter
         .append("circle")
         .attr("class", "dot")
-        .attr("r", Math.min(2.4 / _currentZoomK, 1.6))
+        .attr("r", () => {
+          const screenR = Math.max(
+            DOT_SCREEN_MIN,
+            Math.min(DOT_SCREEN_BASE * Math.sqrt(_currentZoomK), DOT_SCREEN_MAX)
+          );
+          return screenR / _currentZoomK;
+        })
         .attr("cx", (d) => projection([d.lon, d.lat])[0])
         .attr("cy", (d) => projection([d.lon, d.lat])[1])
         .on("mouseover", (event, d) => {
@@ -786,7 +805,13 @@ function drawDots() {
       update
         .attr("cx", (d) => projection([d.lon, d.lat])[0])
         .attr("cy", (d) => projection([d.lon, d.lat])[1])
-        .attr("r", Math.min(2.4 / _currentZoomK, 1.6)),
+        .attr("r", () => {
+          const screenR = Math.max(
+            DOT_SCREEN_MIN,
+            Math.min(DOT_SCREEN_BASE * Math.sqrt(_currentZoomK), DOT_SCREEN_MAX)
+          );
+          return screenR / _currentZoomK;
+        }),
     (exit) => exit.remove()
   );
 }
