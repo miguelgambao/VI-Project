@@ -5,93 +5,48 @@
 <title>Crash Map with Styled Dual Slider</title>
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/topojson@3"></script>
-<style>
-    body { margin: 0; background: #111; color: #fff; font-family: sans-serif; }
-    svg { width: 100vw; height: 85vh; display: block; cursor: grab; }
-    .dot { fill: red; stroke: white; stroke-width: 0.5px; }
-    .country { fill: #222; stroke: #444; }
-    #controls { height: 15vh; padding: 10px; background: #222; display: flex; flex-direction: column; justify-content: center; gap: 10px; }
-
-    /* Slider container */
-    #sliderContainer { display: flex; align-items: center; gap: 15px; }
-    #sliderWrapper { position: relative; width: 300px; height: 20px; }
-
-    /* Base slider track */
-    #sliderWrapper input[type=range] {
-        -webkit-appearance: none;
-        width: 100%;
-        height: 8px;
-        background: transparent;
-        position: absolute;
-        pointer-events: none;
-    }
-
-    /* Slider thumbs */
-    #sliderWrapper input[type=range]::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        pointer-events: all;
-        width: 16px;
-        height: 16px;
-        background: #fff;
-        border-radius: 50%;
-        cursor: pointer;
-        border: none;
-        position: relative;
-        z-index: 2;
-    }
-
-    /* Firefox */
-    #sliderWrapper input[type=range]::-moz-range-thumb {
-        width: 16px;
-        height: 16px;
-        background: #fff;
-        border-radius: 50%;
-        cursor: pointer;
-        border: none;
-        position: relative;
-        z-index: 2;
-    }
-
-    /* Slider track visual */
-    #sliderTrack {
-        position: absolute;
-        top: 50%;
-        left: 0;
-        width: 100%;
-        height: 8px;
-        background: #444;
-        border-radius: 4px;
-        transform: translateY(-50%);
-        z-index: 1;
-    }
-
-    #sliderRange {
-        position: absolute;
-        top: 50%;
-        height: 8px;
-        background: #f00;
-        border-radius: 4px;
-        transform: translateY(-50%);
-        z-index: 1;
-    }
-
-</style>
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-<div id="controls">
-    <div id="sliderContainer">
-        <label>Year Range: <span id="yearLabel">1908 - 2009</span></label>
-        <div id="sliderWrapper">
-            <div id="sliderTrack"></div>
-            <div id="sliderRange"></div>
-            <input id="startYear" type="range" min="1908" max="2009" value="1908">
-            <input id="endYear" type="range" min="1908" max="2009" value="2009">
+<div class="app">
+    <svg></svg>
+    <div id="controls">
+        <div id="countDisplay" class="countDisplay">0</div>
+        <div class="countLabel">Crashes found</div>
+        <div id="sliderContainer" class="sliderBlock">
+            <div class="sliderTitle">Year Range</div>
+            <div class="sliderValue" id="yearLabel">1908 - 2009</div>
+            <div id="sliderWrapper" class="sliderWrapper">
+                <div id="sliderTrack"></div>
+                <div id="sliderRange"></div>
+                <input id="startYear" type="range" min="1908" max="2009" value="1908">
+                <input id="endYear" type="range" min="1908" max="2009" value="2009">
+            </div>
+        </div>
+    
+        <div id="sliderContainerAboard" class="sliderBlock">
+            <div class="sliderTitle">Aboard</div>
+            <div class="sliderValue" id="aboardLabel">—</div>
+            <div id="sliderWrapperAboard" class="sliderWrapper">
+                <div class="sliderTrack"></div>
+                <div class="sliderRange" id="sliderRangeAboard"></div>
+                <input id="startAboard" type="range" min="0" max="100" value="0">
+                <input id="endAboard" type="range" min="0" max="100" value="100">
+            </div>
+        </div>
+        <div id="sliderContainerFatal" class="sliderBlock">
+            <div class="sliderTitle">Fatalities (%)</div>
+            <div class="sliderValue" id="fatalLabel">—</div>
+            <div id="sliderWrapperFatal" class="sliderWrapper">
+                <div class="sliderTrack"></div>
+                <div class="sliderRange" id="sliderRangeFatal"></div>
+                <input id="startFatal" type="range" min="0" max="100" value="0">
+                <input id="endFatal" type="range" min="0" max="100" value="100">
+            </div>
         </div>
     </div>
 </div>
-
-<svg></svg>
 
 <script>
 const width = window.innerWidth;
@@ -116,11 +71,13 @@ const zoom = d3.zoom()
 svg.call(zoom);
 
 let allLocations = [];
+let filters = {};
 
 const startSlider = document.getElementById("startYear");
 const endSlider = document.getElementById("endYear");
 const yearLabel = document.getElementById("yearLabel");
 const sliderRange = document.getElementById("sliderRange");
+const sliderWrapper = document.getElementById("sliderWrapper");
 
 function updateSliderRange() {
     const min = parseInt(startSlider.min);
@@ -128,15 +85,12 @@ function updateSliderRange() {
     const start = parseInt(startSlider.value);
     const end = parseInt(endSlider.value);
 
-    // Calculate percentage positions for bar
-    const thumbOffset = 16 / 2; // half thumb width in px
-    const trackWidth = sliderWrapper.clientWidth - thumbOffset * 2;
+    // Use percent positions so the colored range and thumbs align with the visual track
+    const percentStart = ((start - min) / (max - min)) * 100;
+    const percentEnd = ((end - min) / (max - min)) * 100;
 
-    const percentStart = ((start - min) / (max - min)) * trackWidth + thumbOffset;
-    const percentEnd = ((end - min) / (max - min)) * trackWidth + thumbOffset;
-
-    sliderRange.style.left = percentStart + "px";
-    sliderRange.style.width = (percentEnd - percentStart) + "px";
+    sliderRange.style.left = percentStart + "%";
+    sliderRange.style.width = (percentEnd - percentStart) + "%";
 }
 
 
@@ -152,6 +106,8 @@ Promise.all([
     const latKey = keys.find(k => k.toLowerCase().includes("lat"));
     const lonKey = keys.find(k => k.toLowerCase().includes("lon"));
     const dateKey = keys.find(k => k.toLowerCase().includes("date"));
+    const aboardKey = keys.find(k => k.toLowerCase().includes("aboard") || k.toLowerCase().includes("abo"));
+    const fatalKey = keys.find(k => k.toLowerCase().includes("fatal") || k.toLowerCase().includes("death") || k.toLowerCase().includes("fat"));
 
     if (!latKey || !lonKey || !dateKey) { console.error("Missing lat/lon/date columns"); return; }
 
@@ -170,13 +126,45 @@ Promise.all([
             if (!isNaN(dt)) year = dt.getFullYear();
         }
 
-        return { lat, lon, year };
+        // parse aboard/fatal values if columns exist
+        let aboard = null;
+        if (aboardKey && d[aboardKey] != null) {
+            let raw = d[aboardKey].toString().trim().replace(/,/g, "");
+            raw = raw.replace(/[^\d.\-]/g, "");
+            aboard = raw === "" ? null : parseFloat(raw);
+        }
+        let fatal = null;
+        if (fatalKey && d[fatalKey] != null) {
+            let raw = d[fatalKey].toString().trim().replace(/,/g, "");
+            raw = raw.replace(/[^\d.\-]/g, "");
+            fatal = raw === "" ? null : parseFloat(raw);
+        }
+
+        // compute fatal percentage if both aboard and fatal present
+        let fatalPct = null;
+        if (aboard != null && aboard > 0 && fatal != null && !isNaN(fatal)) {
+            fatalPct = (fatal / aboard) * 100;
+        }
+
+        return { lat, lon, year, aboard, fatal, fatalPct };
     }).filter(d =>
         !isNaN(d.lat) && !isNaN(d.lon) &&
         d.lat >= -90 && d.lat <= 90 &&
         d.lon >= -180 && d.lon <= 180 &&
         d.year
     );
+
+    // compute min/max for aboard and fatal if available
+    let aboardVals = allLocations.map(d => d.aboard).filter(v => v != null && !isNaN(v));
+    // use fatal percentage values for percent-based filtering
+    let fatalVals = allLocations.map(d => d.fatalPct).filter(v => v != null && !isNaN(v));
+    const hasAboard = aboardVals.length > 0;
+    const hasFatal = fatalVals.length > 0;
+    const aboardMin = hasAboard ? Math.min(...aboardVals) : 0;
+    const aboardMax = hasAboard ? Math.max(...aboardVals) : 0;
+    // fatal percent slider will be percentage-based (0-100)
+    const fatalMin = 0;
+    const fatalMax = 100;
 
     // Draw map
     const countries = topojson.feature(worldData, worldData.objects.countries);
@@ -185,11 +173,47 @@ Promise.all([
         .attr("d", path)
         .attr("class", "country");
 
-    // Initial draw
-    drawDots(parseInt(startSlider.value), parseInt(endSlider.value));
-    updateSliderRange();
+    // Initialize filters (global `filters` declared earlier)
+    filters.yearStart = parseInt(startSlider.value);
+    filters.yearEnd = parseInt(endSlider.value);
+    filters.aboardStart = aboardMin;
+    filters.aboardEnd = aboardMax;
+    filters.fatalStart = fatalMin;
+    filters.fatalEnd = fatalMax;
 
-    function update() {
+    // setup Aboard slider values if available
+    if (hasAboard) {
+        document.getElementById('startAboard').min = aboardMin;
+        document.getElementById('startAboard').max = aboardMax;
+        document.getElementById('endAboard').min = aboardMin;
+        document.getElementById('endAboard').max = aboardMax;
+        document.getElementById('startAboard').value = aboardMin;
+        document.getElementById('endAboard').value = aboardMax;
+        document.getElementById('aboardLabel').textContent = `${aboardMin} - ${aboardMax}`;
+    } else {
+        document.getElementById('sliderContainerAboard').style.opacity = 0.5;
+        document.getElementById('aboardLabel').textContent = 'n/a';
+    }
+
+    if (hasFatal) {
+        // Fatalities use percentage of aboard (0-100)
+        document.getElementById('startFatal').min = 0;
+        document.getElementById('startFatal').max = 100;
+        document.getElementById('endFatal').min = 0;
+        document.getElementById('endFatal').max = 100;
+        document.getElementById('startFatal').value = 0;
+        document.getElementById('endFatal').value = 100;
+        document.getElementById('fatalLabel').textContent = `0% - 100%`;
+    } else {
+        document.getElementById('sliderContainerFatal').style.opacity = 0.5;
+        document.getElementById('fatalLabel').textContent = 'n/a';
+    }
+
+    // Initial draw
+    updateSliderRange();
+    drawDots();
+
+    function updateYear() {
         let start = parseInt(startSlider.value);
         let end = parseInt(endSlider.value);
         if (start > end) start = end;
@@ -197,21 +221,231 @@ Promise.all([
         startSlider.value = start;
         endSlider.value = end;
         yearLabel.textContent = `${start} - ${end}`;
-        drawDots(start, end);
+        filters.yearStart = start;
+        filters.yearEnd = end;
         updateSliderRange();
+        drawDots();
     }
 
-    startSlider.addEventListener("input", update);
-    endSlider.addEventListener("input", update);
+    startSlider.addEventListener("input", updateYear);
+    endSlider.addEventListener("input", updateYear);
+
+    // Allow both overlapping sliders to be draggable by bringing the active
+    // thumb's input to the front when the user interacts with it.
+    function bringToFront(slider) {
+        if (slider === startSlider) {
+            startSlider.style.zIndex = 4;
+            endSlider.style.zIndex = 3;
+        } else {
+            endSlider.style.zIndex = 4;
+            startSlider.style.zIndex = 3;
+        }
+    }
+
+    [startSlider, endSlider].forEach(s => {
+        s.addEventListener('pointerdown', () => bringToFront(s));
+        s.addEventListener('focus', () => bringToFront(s));
+    });
+
+    // Reset stacking after interaction ends so both remain usable
+    document.addEventListener('pointerup', () => {
+        startSlider.style.zIndex = 3;
+        endSlider.style.zIndex = 3;
+    });
+
+    // If overlapping inputs still intercept each other, implement a
+    // custom pointer handler on the wrapper: choose nearest thumb on
+    // pointerdown and drive that slider while dragging.
+    let activeSlider = null;
+    let dragging = false;
+
+    function pctFromEvent(e) {
+        const rect = sliderWrapper.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        return Math.max(0, Math.min(1, x / rect.width));
+    }
+
+    function setSliderValueFromPct(slider, pct) {
+        const min = parseInt(slider.min);
+        const max = parseInt(slider.max);
+        const val = Math.round(min + pct * (max - min));
+        slider.value = val;
+        updateYear();
+    }
+
+    sliderWrapper.addEventListener('pointerdown', (e) => {
+        // Prevent text/image dragging
+        e.preventDefault();
+
+        const pct = pctFromEvent(e);
+        const min = parseInt(startSlider.min);
+        const max = parseInt(startSlider.max);
+
+        const startPct = (parseInt(startSlider.value) - min) / (max - min);
+        const endPct = (parseInt(endSlider.value) - min) / (max - min);
+
+        // pick nearest thumb
+        activeSlider = (Math.abs(pct - startPct) <= Math.abs(pct - endPct)) ? startSlider : endSlider;
+        bringToFront(activeSlider);
+        dragging = true;
+        setSliderValueFromPct(activeSlider, pct);
+    });
+
+    window.addEventListener('pointermove', (e) => {
+        if (!dragging || !activeSlider) return;
+        const pct = pctFromEvent(e);
+        setSliderValueFromPct(activeSlider, pct);
+    });
+
+    window.addEventListener('pointerup', (e) => {
+        if (dragging) {
+            dragging = false;
+            activeSlider = null;
+            // restore stacking
+            startSlider.style.zIndex = 3;
+            endSlider.style.zIndex = 3;
+        }
+    });
+
+    // Generic setup for additional dual sliders (aboard/fatal)
+    function setupDual(wrapperId, startId, endId, rangeId, labelId, hasValues, isPercent = false) {
+        const wrapper = document.getElementById(wrapperId);
+        const start = document.getElementById(startId);
+        const end = document.getElementById(endId);
+        const rangeEl = document.getElementById(rangeId);
+        const label = document.getElementById(labelId);
+
+        function updateRange() {
+            const min = parseFloat(start.min);
+            const max = parseFloat(start.max);
+            const s = parseFloat(start.value);
+            const e = parseFloat(end.value);
+            let percentStart = ((s - min) / (max - min)) * 100;
+            let percentEnd = ((e - min) / (max - min)) * 100;
+            rangeEl.style.left = percentStart + "%";
+            rangeEl.style.width = (percentEnd - percentStart) + "%";
+            if (isPercent) label.textContent = `${s}% - ${e}%`;
+            else label.textContent = `${s} - ${e}`;
+        }
+
+        function bringToFront(slider) {
+            if (slider === start) {
+                start.style.zIndex = 4;
+                end.style.zIndex = 3;
+            } else {
+                end.style.zIndex = 4;
+                start.style.zIndex = 3;
+            }
+        }
+
+        if (!hasValues) return { updateRange: () => {} };
+
+        start.addEventListener('input', () => {
+            // keep order
+            let sv = parseFloat(start.value);
+            let ev = parseFloat(end.value);
+            if (sv > ev) sv = ev;
+            start.value = sv;
+            // update filters object
+            const base = startId.replace(/^start/, '').toLowerCase();
+            filters[base + 'Start'] = sv;
+            updateRange();
+            drawDots();
+        });
+        end.addEventListener('input', () => {
+            let sv = parseFloat(start.value);
+            let ev = parseFloat(end.value);
+            if (ev < sv) ev = sv;
+            end.value = ev;
+            const base2 = endId.replace(/^end/, '').toLowerCase();
+            filters[base2 + 'End'] = ev;
+            updateRange();
+            drawDots();
+        });
+
+        [start, end].forEach(s => {
+            s.addEventListener('pointerdown', () => bringToFront(s));
+            s.addEventListener('focus', () => bringToFront(s));
+        });
+
+        // wrapper pointer handler to pick nearest
+        let active = null;
+        let draggingLocal = false;
+
+        function pctFromEventLocal(e) {
+            const rect = wrapper.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            return Math.max(0, Math.min(1, x / rect.width));
+        }
+
+        function setValFromPct(slider, pct) {
+            const min = parseFloat(slider.min);
+            const max = parseFloat(slider.max);
+            const val = Math.round(min + pct * (max - min));
+            slider.value = val;
+            slider.dispatchEvent(new Event('input'));
+        }
+
+        wrapper.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            const pct = pctFromEventLocal(e);
+            const min = parseFloat(start.min);
+            const max = parseFloat(start.max);
+            const sPct = (parseFloat(start.value) - min) / (max - min);
+            const ePct = (parseFloat(end.value) - min) / (max - min);
+            active = (Math.abs(pct - sPct) <= Math.abs(pct - ePct)) ? start : end;
+            bringToFront(active);
+            draggingLocal = true;
+            setValFromPct(active, pct);
+        });
+
+        window.addEventListener('pointermove', (e) => {
+            if (!draggingLocal || !active) return;
+            const pct = pctFromEventLocal(e);
+            setValFromPct(active, pct);
+        });
+
+        window.addEventListener('pointerup', () => {
+            if (draggingLocal) {
+                draggingLocal = false;
+                active = null;
+                start.style.zIndex = 3;
+                end.style.zIndex = 3;
+            }
+        });
+
+        // initial range render
+        updateRange();
+        return { updateRange };
+    }
+
+    // initialize Aboard/Fatal sliders
+    const aboardSetup = setupDual('sliderWrapperAboard','startAboard','endAboard','sliderRangeAboard','aboardLabel', hasAboard, false);
+    const fatalSetup = setupDual('sliderWrapperFatal','startFatal','endFatal','sliderRangeFatal','fatalLabel', hasFatal, true);
 
 });
 
-// Draw dots filtered by year
-function drawDots(startYear, endYear) {
-    const filtered = allLocations.filter(d => d.year >= startYear && d.year <= endYear);
+// Draw dots filtered by active filters
+function drawDots() {
+    const f = filters;
+    if (!f || Object.keys(f).length === 0) return;
+
+    let filtered = allLocations.filter(d => d.year >= f.yearStart && d.year <= f.yearEnd);
+    if (f.aboardStart !== undefined && f.aboardEnd !== undefined) {
+        filtered = filtered.filter(d => d.aboard != null && d.aboard >= f.aboardStart && d.aboard <= f.aboardEnd);
+    }
+    if (f.fatalStart !== undefined && f.fatalEnd !== undefined) {
+        filtered = filtered.filter(d => d.fatalPct != null && d.fatalPct >= f.fatalStart && d.fatalPct <= f.fatalEnd);
+    }
+
+    // update crash count display
+    const countEl = document.getElementById('countDisplay');
+    if (countEl) {
+        countEl.textContent = new Intl.NumberFormat().format(filtered.length);
+    }
 
     const dots = g.selectAll("circle.dot")
-        .data(filtered, d => d.lat + "-" + d.lon + "-" + d.year);
+        .data(filtered, d => d.lat + "-" + d.lon + "-" + d.year + "-" + (d.aboard??'') + "-" + (d.fatal??''));
 
     dots.join(
         enter => enter.append("circle")

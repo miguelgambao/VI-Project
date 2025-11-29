@@ -1,0 +1,163 @@
+.app {
+  display: flex;
+  height: 100vh;
+}
+body {
+  margin: 0;
+  background: #111;
+  color: #fff;
+  font-family: sans-serif;
+}
+svg {
+  flex: 1 1 auto;
+  height: 100vh;
+  display: block;
+  cursor: grab;
+}
+.dot {
+  fill: red;
+}
+.country {
+  fill: #222;
+  stroke-width: 0.2px;
+  stroke: #444;
+}
+#controls {
+  width: 25%;
+  min-width: 220px;
+  height: 100vh;
+  padding: 16px;
+  box-sizing: border-box;
+  background: #222;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: center;
+  overflow-y: auto;
+}
+
+/* Slider container rows (was used for top row) */
+#sliderContainer {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+/* Individual slider block: title, value, then bar */
+.sliderBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.sliderTitle {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #fff;
+}
+.sliderValue {
+  font-size: 0.9rem;
+  color: #ddd;
+}
+.countDisplay {
+  font-size: 2.4rem;
+  font-weight: 800;
+  color: #fff;
+  text-align: center;
+  margin-bottom: 4px;
+}
+.countLabel {
+  font-size: 0.85rem;
+  color: #bbb;
+  text-align: center;
+  margin-bottom: 10px;
+}
+#sliderWrapper,
+.sliderWrapper {
+  position: relative;
+  width: 100%;
+  max-width: 300px;
+  height: 28px;
+  /* allow space for the thumb and keep everything vertically centered */
+}
+
+/* Base slider track */
+#sliderWrapper input[type="range"],
+.sliderWrapper input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  -moz-appearance: none;
+  width: 100%;
+  height: 8px;
+  background: transparent;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: all;
+  margin: 0;
+  padding: 0;
+  z-index: 3;
+}
+
+/* Slider thumbs */
+#sliderWrapper input[type="range"]::-webkit-slider-thumb,
+.sliderWrapper input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  pointer-events: all;
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  position: relative;
+  z-index: 3;
+}
+
+/* Firefox */
+#sliderWrapper input[type="range"]::-moz-range-thumb,
+.sliderWrapper input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  position: relative;
+  z-index: 3;
+}
+
+/* Slider track visual */
+#sliderTrack,
+.sliderWrapper .sliderTrack {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 8px;
+  background: #444;
+  border-radius: 4px;
+  transform: translateY(-50%);
+  z-index: 1;
+}
+
+#sliderRange,
+.sliderWrapper .sliderRange {
+  position: absolute;
+  top: 50%;
+  height: 8px;
+  background: #f00;
+  border-radius: 4px;
+  transform: translateY(-50%);
+  z-index: 2;
+  /* allow clicks to pass through the colored range so thumbs remain interactive */
+  pointer-events: none;
+}
+
+#sliderTrack,
+.sliderWrapper .sliderTrack {
+  /* make sure the visual track doesn't intercept pointer events either */
+  pointer-events: none;
+}
