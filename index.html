@@ -16,12 +16,12 @@
         <div class="countLabel">Crashes found</div>
         <div id="sliderContainer" class="sliderBlock">
             <div class="sliderTitle">Year Range</div>
-            <div class="sliderValue" id="yearLabel">1908 - 2009</div>
+            <div class="sliderValue" id="yearLabel">1940 - 2009</div>
             <div id="sliderWrapper" class="sliderWrapper">
                 <div id="sliderTrack"></div>
                 <div id="sliderRange"></div>
-                <input id="startYear" type="range" min="1908" max="2009" value="1908">
-                <input id="endYear" type="range" min="1908" max="2009" value="2009">
+                <input id="startYear" type="range" min="1940" max="2009" value="1940">
+                <input id="endYear" type="range" min="1940" max="2009" value="2009">
             </div>
         </div>
     
@@ -45,6 +45,7 @@
                 <input id="endFatal" type="range" min="0" max="100" value="100">
             </div>
         </div>
+        <div id="conditionsContainer" class="conditionsContainer"></div>
     </div>
 </div>
 
@@ -61,12 +62,17 @@ const projection = d3.geoNaturalEarth1()
 const path = d3.geoPath().projection(projection);
 const g = svg.append("g");
 
-const zoom = d3.zoom()
-    .scaleExtent([1, 8])
+// tooltip element (hidden until hover)
+const tooltip = d3.select("body").append("div")
+    .attr("class", "tooltip")
+    .style("display", "none");
+
+    const zoom = d3.zoom()
+    .scaleExtent([1, 50])
     .on("zoom", (event) => {
         const {transform} = event;
         g.attr("transform", transform);
-        g.selectAll("circle.dot").attr("r", 3 / transform.k);
+        g.selectAll("circle.dot").attr("r", 2 / transform.k);
     });
 svg.call(zoom);
 
@@ -97,7 +103,7 @@ function updateSliderRange() {
 // Load map + CSV
 Promise.all([
     fetch("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(r => r.json()),
-    d3.dsv(";", "crashes_data_test.csv")
+    d3.dsv(";", "crashestest2.csv")
 ])
 .then(([worldData, crashData]) => {
 
@@ -106,6 +112,13 @@ Promise.all([
     const latKey = keys.find(k => k.toLowerCase().includes("lat"));
     const lonKey = keys.find(k => k.toLowerCase().includes("lon"));
     const dateKey = keys.find(k => k.toLowerCase().includes("date"));
+    const timeKey = keys.find(k => k.toLowerCase().includes("time"));
+    const locationKey = keys.find(k => k.toLowerCase().includes("location"));
+    const operatorKey = keys.find(k => k.toLowerCase().includes("operator"));
+    const routeKey = keys.find(k => k.toLowerCase().includes("route"));
+    const typeKey = keys.find(k => k.toLowerCase().includes("type"));
+    const summaryKey = keys.find(k => k.toLowerCase().includes("summary"));
+    const generalKey = keys.find(k => k.toLowerCase().includes("general") || k.toLowerCase().includes("condition") || k.toLowerCase().includes("weather"));
     const aboardKey = keys.find(k => k.toLowerCase().includes("aboard") || k.toLowerCase().includes("abo"));
     const fatalKey = keys.find(k => k.toLowerCase().includes("fatal") || k.toLowerCase().includes("death") || k.toLowerCase().includes("fat"));
 
@@ -121,10 +134,21 @@ Promise.all([
         let lon = parseFloat(rawLon);
 
         let year = null;
+        let dateStr = null;
         if (d[dateKey]) {
+            dateStr = d[dateKey];
             let dt = new Date(d[dateKey]);
             if (!isNaN(dt)) year = dt.getFullYear();
         }
+
+        const timeStr = timeKey ? (d[timeKey] || '') : '';
+        const locationStr = locationKey ? (d[locationKey] || '') : '';
+        const operatorStr = operatorKey ? (d[operatorKey] || '') : '';
+        const routeStr = routeKey ? (d[routeKey] || '') : '';
+        const typeStr = typeKey ? (d[typeKey] || '') : '';
+        const summaryStr = summaryKey ? (d[summaryKey] || '') : '';
+        const condRaw = generalKey ? (d[generalKey] || '') : '';
+        const conditions = (condRaw || '').toString().split(/[;,]/).map(s => s.trim()).filter(Boolean).map(s => s.replace(/\s+/g,' ').trim());
 
         // parse aboard/fatal values if columns exist
         let aboard = null;
@@ -146,7 +170,7 @@ Promise.all([
             fatalPct = (fatal / aboard) * 100;
         }
 
-        return { lat, lon, year, aboard, fatal, fatalPct };
+        return { lat, lon, year, dateStr, timeStr, locationStr, operatorStr, routeStr, typeStr, summaryStr, conditions, aboard, fatal, fatalPct };
     }).filter(d =>
         !isNaN(d.lat) && !isNaN(d.lon) &&
         d.lat >= -90 && d.lat <= 90 &&
@@ -207,6 +231,40 @@ Promise.all([
     } else {
         document.getElementById('sliderContainerFatal').style.opacity = 0.5;
         document.getElementById('fatalLabel').textContent = 'n/a';
+    }
+
+    // Build unique weather/condition list and render checkboxes
+    const condSet = new Set();
+    allLocations.forEach(d => {
+        if (Array.isArray(d.conditions)) d.conditions.forEach(c => condSet.add(c));
+    });
+    const conds = Array.from(condSet).sort();
+    const condContainer = document.getElementById('conditionsContainer');
+    if (conds.length === 0) {
+        condContainer.innerHTML = '<div class="sliderTitle">Weather Conditions</div><div class="sliderValue">n/a</div>';
+    } else {
+        // initialize selected set empty (no condition filter by default)
+        filters.conditionsSelected = new Set();
+        let html = '<div class="sliderTitle">Weather Conditions</div>';
+        html += '<div class="conditionsList">';
+        conds.forEach((c, i) => {
+            const id = 'cond_' + i;
+            // start unchecked
+            html += `<label class="condLabel"><input type="checkbox" id="${id}" data-cond="${c}"> ${c}</label>`;
+        });
+        html += '</div>';
+        condContainer.innerHTML = html;
+
+        // wire events
+        conds.forEach((c, i) => {
+            const id = 'cond_' + i;
+            const cb = document.getElementById(id);
+            cb.addEventListener('change', (e) => {
+                if (e.target.checked) filters.conditionsSelected.add(c);
+                else filters.conditionsSelected.delete(c);
+                drawDots();
+            });
+        });
     }
 
     // Initial draw
@@ -438,6 +496,13 @@ function drawDots() {
         filtered = filtered.filter(d => d.fatalPct != null && d.fatalPct >= f.fatalStart && d.fatalPct <= f.fatalEnd);
     }
 
+    // apply weather condition checkbox filters (if present)
+    // when checkboxes are selected we require the crash to include ALL selected conditions (AND)
+    if (f.conditionsSelected && f.conditionsSelected.size > 0) {
+        const selected = Array.from(f.conditionsSelected);
+        filtered = filtered.filter(d => Array.isArray(d.conditions) && selected.every(s => d.conditions.includes(s)));
+    }
+
     // update crash count display
     const countEl = document.getElementById('countDisplay');
     if (countEl) {
@@ -450,9 +515,38 @@ function drawDots() {
     dots.join(
         enter => enter.append("circle")
             .attr("class", "dot")
-            .attr("r", 3)
+            .attr("r", 2)
             .attr("cx", d => projection([d.lon, d.lat])[0])
-            .attr("cy", d => projection([d.lon, d.lat])[1]),
+            .attr("cy", d => projection([d.lon, d.lat])[1])
+            .on('mouseover', (event, d) => {
+                // format values
+                const nf = new Intl.NumberFormat();
+                const aboard = (d.aboard != null && !isNaN(d.aboard)) ? nf.format(d.aboard) : 'n/a';
+                const fatal = (d.fatal != null && !isNaN(d.fatal)) ? nf.format(d.fatal) : 'n/a';
+                const fatalPct = (d.fatalPct != null && !isNaN(d.fatalPct)) ? (d.fatalPct.toFixed(1) + '%') : 'n/a';
+                const coords = (d.lat != null && d.lon != null) ? `${d.lat.toFixed(3)}, ${d.lon.toFixed(3)}` : 'n/a';
+
+                const html = `
+                    <div><span class="k">Date:</span> ${d.dateStr ?? 'n/a'} ${d.timeStr ?? ''}</div>
+                    <div><span class="k">Location:</span> ${d.locationStr || 'n/a'}</div>
+                    <div><span class="k">Operator:</span> ${d.operatorStr || 'n/a'}</div>
+                    <div><span class="k">Route:</span> ${d.routeStr || 'n/a'}</div>
+                    <div><span class="k">Type:</span> ${d.typeStr || 'n/a'}</div>
+                    <div><span class="k">Fatalities:</span> ${fatal} (${fatalPct})</div>
+                    <div><span class="k">Summary:</span> ${d.summaryStr || 'n/a'}</div>
+                `;
+                tooltip.style('display','block').html(html);
+                // initial position
+                tooltip.style('left', (event.pageX + 12) + 'px')
+                       .style('top', (event.pageY + 12) + 'px');
+            })
+            .on('mousemove', (event) => {
+                tooltip.style('left', (event.pageX + 12) + 'px')
+                       .style('top', (event.pageY + 12) + 'px');
+            })
+            .on('mouseout', () => {
+                tooltip.style('display','none');
+            }),
         update => update,
         exit => exit.remove()
     );

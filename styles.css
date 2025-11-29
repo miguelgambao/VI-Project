@@ -74,6 +74,33 @@ svg {
   text-align: center;
   margin-bottom: 10px;
 }
+
+.conditionsContainer { 
+  width: 100%;
+  max-width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255,255,255,0.04);
+}
+.conditionsContainer .conditionsList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.condLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.02);
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  color: #ddd;
+}
+.condLabel input { width: 14px; height: 14px }
 #sliderWrapper,
 .sliderWrapper {
   position: relative;
@@ -161,3 +188,22 @@ svg {
   /* make sure the visual track doesn't intercept pointer events either */
   pointer-events: none;
 }
+
+/* Tooltip for crash dots */
+.tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: rgba(20,20,20,0.95);
+  color: #fff;
+  padding: 8px 10px;
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.6);
+  font-size: 0.85rem;
+  max-width: 300px;
+  line-height: 1.25;
+  z-index: 2000;
+}
+
+.tooltip .k { font-weight:700; margin-right:6px; color:#ddd }
+.tooltip div { margin-bottom:4px }
+.tooltip div:last-child { margin-bottom:0 }
