@@ -38,7 +38,7 @@ const DOT_SCREEN_MAX = 20; // maximum on-screen radius in px (visual cap)
 let _currentZoomK = 1;
 const zoom = d3
   .zoom()
-  .scaleExtent([1, 50])
+  .scaleExtent([1, 100])
   .on("zoom", (event) => {
     const { transform } = event;
     _currentZoomK = transform.k;
