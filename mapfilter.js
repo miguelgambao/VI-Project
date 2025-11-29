@@ -1,14 +1,24 @@
-const width = window.innerWidth;
-const height = window.innerHeight * 0.85;
+function getMapSize() {
+  const wrap = document.getElementById("mapWrap");
+  // If a map wrapper exists (with the filters to the right), use its width
+  // so the map occupies the remaining ~80% of the screen. Fall back to
+  // window size if it's not available.
+  const w = wrap ? wrap.clientWidth : Math.floor(window.innerWidth * 0.8);
+  const h = wrap ? wrap.clientHeight : Math.floor(window.innerHeight * 0.85);
+  return { w, h };
+}
+
+let { w: width, h: height } = getMapSize();
 
 const svg = d3.select("svg");
+svg.attr("width", width).attr("height", height);
 
-const projection = d3
+let projection = d3
   .geoNaturalEarth1()
   .scale(width / 6)
   .translate([width / 2, height / 2]);
 
-const path = d3.geoPath().projection(projection);
+const path = d3.geoPath().projection(() => projection()).projection(projection);
 const g = svg.append("g");
 
 // tooltip element (hidden until hover)
@@ -61,7 +71,7 @@ Promise.all([
   fetch("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(
     (r) => r.json()
   ),
-  d3.dsv(";", "crashestest2.csv"),
+  d3.dsv(";", "crashesFinal.csv"),
 ]).then(([worldData, crashData]) => {
   // Detect columns
   const keys = Object.keys(crashData[0]);
@@ -224,6 +234,50 @@ Promise.all([
   const countries = topojson.feature(worldData, worldData.objects.countries);
   g.append("path").datum(countries).attr("d", path).attr("class", "country");
 
+  // ensure the SVG has explicit pixel dimensions so transforms use the correct
+  // viewport size. We'll also compute translateExtent from the projected
+  // country bounds and set up a resize handler to update everything when the
+  // container size changes (so the map occupies the left area when the
+  // filters occupy the right column).
+  svg.attr("width", width).attr("height", height);
+
+  function computeAndApplyExtent() {
+    // recompute projection based on current container size
+    ({ w: width, h: height } = getMapSize());
+    svg.attr("width", width).attr("height", height);
+    projection.scale(width / 6).translate([width / 2, height / 2]);
+    // ensure path generator uses updated projection
+    path.projection(projection);
+    // update country path geometry
+    g.selectAll("path.country").attr("d", path);
+
+    // compute bounds from the countries geometry and apply padding
+    const b = path.bounds(countries);
+    const pad = 20;
+    const extent = [
+      [b[0][0] - pad, b[0][1] - pad],
+      [b[1][0] + pad, b[1][1] + pad],
+    ];
+
+    zoom.translateExtent(extent);
+    svg.call(zoom);
+  }
+
+  // initial extent application
+  computeAndApplyExtent();
+
+  // update map sizing and bounds when window resizes so the map occupies the
+  // space left after the right-hand filter panel (responsive behavior)
+  window.addEventListener("resize", () => {
+    // small throttle to avoid thrashing on rapid resize
+    clearTimeout(window.__mapResizeTimer);
+    window.__mapResizeTimer = setTimeout(() => {
+      computeAndApplyExtent();
+      // re-render dots/routes to new projected positions
+      drawDots();
+    }, 120);
+  });
+
   // Initialize filters (global `filters` declared earlier)
   filters.yearStart = parseInt(startSlider.value);
   filters.yearEnd = parseInt(endSlider.value);
@@ -246,7 +300,7 @@ Promise.all([
       "aboardLabel"
     ).textContent = `${aboardMin} - ${aboardMax}`;
   } else {
-    document.getElementById("sliderContainerAboard").style.opacity = 0.5;
+    document.getElementById ("sliderContainerAboard").style.opacity = 0.5;
     document.getElementById("aboardLabel").textContent = "n/a";
   }
 
