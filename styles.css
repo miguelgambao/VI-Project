@@ -2,6 +2,14 @@
   display: flex;
   height: 100vh;
 }
+/* map wrapper so we can absolutely position controls over the map */
+.mapWrap {
+  position: relative;
+  flex: 1 1 auto;
+  height: 100vh;
+  /* allow the map area to shrink below its content width to avoid overlaying the sidebar */
+  min-width: 0;
+}
 body {
   margin: 0;
   background: #111;
@@ -9,11 +17,28 @@ body {
   font-family: sans-serif;
 }
 svg {
-  flex: 1 1 auto;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   display: block;
   cursor: grab;
 }
+
+/* toggle button overlaid on the map (bottom-right) */
+.routeToggle {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 2100;
+  background: rgba(20,20,20,0.9);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.06);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+}
+.routeToggle:hover { background: rgba(30,30,30,0.95); }
 .dot {
   fill: red;
 }
@@ -207,3 +232,14 @@ svg {
 .tooltip .k { font-weight:700; margin-right:6px; color:#ddd }
 .tooltip div { margin-bottom:4px }
 .tooltip div:last-child { margin-bottom:0 }
+
+/* route lines from crash to origin/start point */
+path.route {
+  fill: none;
+  stroke: rgba(255,60,60,0.95);
+  stroke-width: 0.6px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+  opacity: 0.95;
+}

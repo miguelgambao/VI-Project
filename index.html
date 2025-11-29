@@ -10,7 +10,10 @@
 <body>
 
 <div class="app">
-    <svg></svg>
+    <div id="mapWrap" class="mapWrap">
+        <svg></svg>
+        <button id="toggleRoutesBtn" class="routeToggle" title="Show/Hide route lines">Hide routes</button>
+    </div>
     <div id="controls">
         <div id="countDisplay" class="countDisplay">0</div>
         <div class="countLabel">Crashes found</div>
@@ -67,12 +70,17 @@ const tooltip = d3.select("body").append("div")
     .attr("class", "tooltip")
     .style("display", "none");
 
-    const zoom = d3.zoom()
+        let _currentZoomK = 1;
+        const zoom = d3.zoom()
     .scaleExtent([1, 50])
     .on("zoom", (event) => {
-        const {transform} = event;
-        g.attr("transform", transform);
-        g.selectAll("circle.dot").attr("r", 2 / transform.k);
+            const {transform} = event;
+            _currentZoomK = transform.k;
+            g.attr("transform", transform);
+            // scale dots and routes by 1/k so they maintain visual proportion when zooming
+            // cap the dot radius so they don't become too large when zoomed out
+            g.selectAll("circle.dot").attr("r", Math.min(2.4 / transform.k, 1.6));
+            g.selectAll("path.route").style("stroke-width", (0.6 / transform.k) + 'px');
     });
 svg.call(zoom);
 
@@ -121,6 +129,9 @@ Promise.all([
     const generalKey = keys.find(k => k.toLowerCase().includes("general") || k.toLowerCase().includes("condition") || k.toLowerCase().includes("weather"));
     const aboardKey = keys.find(k => k.toLowerCase().includes("aboard") || k.toLowerCase().includes("abo"));
     const fatalKey = keys.find(k => k.toLowerCase().includes("fatal") || k.toLowerCase().includes("death") || k.toLowerCase().includes("fat"));
+    // optional starting/origin coordinate columns (if present in CSV)
+    const startLatKey = keys.find(k => (k.toLowerCase().includes("start") && k.toLowerCase().includes("lat")) || (k.toLowerCase().includes("origin") && k.toLowerCase().includes("lat")) || (k.toLowerCase().includes("orig") && k.toLowerCase().includes("lat")) );
+    const startLonKey = keys.find(k => (k.toLowerCase().includes("start") && k.toLowerCase().includes("lon")) || (k.toLowerCase().includes("origin") && k.toLowerCase().includes("lon")) || (k.toLowerCase().includes("orig") && k.toLowerCase().includes("lon")) );
 
     if (!latKey || !lonKey || !dateKey) { console.error("Missing lat/lon/date columns"); return; }
 
@@ -132,6 +143,20 @@ Promise.all([
 
         let lat = parseFloat(rawLat);
         let lon = parseFloat(rawLon);
+
+        // optional starting/origin coordinates
+        let startLat = null;
+        let startLon = null;
+        if (startLatKey && d[startLatKey] != null) {
+            let raw = d[startLatKey].toString().trim().replace(",", ".");
+            raw = raw.replace(/[^\d.\-]/g, "");
+            startLat = raw === "" ? null : parseFloat(raw);
+        }
+        if (startLonKey && d[startLonKey] != null) {
+            let raw = d[startLonKey].toString().trim().replace(",", ".");
+            raw = raw.replace(/[^\d.\-]/g, "");
+            startLon = raw === "" ? null : parseFloat(raw);
+        }
 
         let year = null;
         let dateStr = null;
@@ -170,7 +195,7 @@ Promise.all([
             fatalPct = (fatal / aboard) * 100;
         }
 
-        return { lat, lon, year, dateStr, timeStr, locationStr, operatorStr, routeStr, typeStr, summaryStr, conditions, aboard, fatal, fatalPct };
+        return { lat, lon, year, dateStr, timeStr, locationStr, operatorStr, routeStr, typeStr, summaryStr, conditions, aboard, fatal, fatalPct, startLat, startLon };
     }).filter(d =>
         !isNaN(d.lat) && !isNaN(d.lon) &&
         d.lat >= -90 && d.lat <= 90 &&
@@ -204,6 +229,8 @@ Promise.all([
     filters.aboardEnd = aboardMax;
     filters.fatalStart = fatalMin;
     filters.fatalEnd = fatalMax;
+    // show route lines by default
+    filters.showRoutes = true;
 
     // setup Aboard slider values if available
     if (hasAboard) {
@@ -231,6 +258,17 @@ Promise.all([
     } else {
         document.getElementById('sliderContainerFatal').style.opacity = 0.5;
         document.getElementById('fatalLabel').textContent = 'n/a';
+    }
+
+    // wire up route toggle button
+    const toggleBtn = document.getElementById('toggleRoutesBtn');
+    if (toggleBtn) {
+        toggleBtn.textContent = filters.showRoutes ? 'Hide routes' : 'Show routes';
+        toggleBtn.addEventListener('click', () => {
+            filters.showRoutes = !filters.showRoutes;
+            toggleBtn.textContent = filters.showRoutes ? 'Hide routes' : 'Show routes';
+            drawDots();
+        });
     }
 
     // Build unique weather/condition list and render checkboxes
@@ -509,17 +547,51 @@ function drawDots() {
         countEl.textContent = new Intl.NumberFormat().format(filtered.length);
     }
 
+    // Draw curved red route lines for records that include a starting/origin point
+    if (f.showRoutes) {
+        const routesData = filtered.filter(d => d.startLat != null && d.startLon != null && !isNaN(d.startLat) && !isNaN(d.startLon));
+        function curvePath(d) {
+            const p1 = projection([d.lon, d.lat]);
+            const p2 = projection([d.startLon, d.startLat]);
+            const dx = p2[0] - p1[0];
+            const dy = p2[1] - p1[1];
+            const mx = (p1[0] + p2[0]) / 2;
+            const my = (p1[1] + p2[1]) / 2;
+            const len = Math.sqrt(dx * dx + dy * dy) || 1;
+            const offset = Math.min(80, len * 0.18);
+            const cx = mx - (dy / len) * offset;
+            const cy = my + (dx / len) * offset;
+            return `M${p1[0]},${p1[1]} Q${cx},${cy} ${p2[0]},${p2[1]}`;
+        }
+
+        const routes = g.selectAll('path.route')
+            .data(routesData, d => d.lat + '-' + d.lon + '-route-' + (d.startLat ?? '') + '-' + (d.startLon ?? ''));
+
+        routes.join(
+            enter => enter.append('path')
+                .attr('class', 'route')
+                .attr('d', curvePath)
+                .attr('fill', 'none')
+                .attr('stroke', 'rgba(255,60,60,0.95)')
+                .attr('pointer-events', 'none'),
+            update => update.attr('d', curvePath).style('stroke-width', (0.6 / _currentZoomK) + 'px'),
+            exit => exit.remove()
+        );
+    } else {
+        // remove any existing routes if user toggles them off
+        g.selectAll('path.route').remove();
+    }
+
     const dots = g.selectAll("circle.dot")
         .data(filtered, d => d.lat + "-" + d.lon + "-" + d.year + "-" + (d.aboard??'') + "-" + (d.fatal??''));
 
     dots.join(
         enter => enter.append("circle")
             .attr("class", "dot")
-            .attr("r", 2)
+            .attr("r", Math.min(2.4 / _currentZoomK, 1.6))
             .attr("cx", d => projection([d.lon, d.lat])[0])
             .attr("cy", d => projection([d.lon, d.lat])[1])
             .on('mouseover', (event, d) => {
-                // format values
                 const nf = new Intl.NumberFormat();
                 const aboard = (d.aboard != null && !isNaN(d.aboard)) ? nf.format(d.aboard) : 'n/a';
                 const fatal = (d.fatal != null && !isNaN(d.fatal)) ? nf.format(d.fatal) : 'n/a';
@@ -536,7 +608,6 @@ function drawDots() {
                     <div><span class="k">Summary:</span> ${d.summaryStr || 'n/a'}</div>
                 `;
                 tooltip.style('display','block').html(html);
-                // initial position
                 tooltip.style('left', (event.pageX + 12) + 'px')
                        .style('top', (event.pageY + 12) + 'px');
             })
@@ -547,7 +618,10 @@ function drawDots() {
             .on('mouseout', () => {
                 tooltip.style('display','none');
             }),
-        update => update,
+        update => update
+            .attr("cx", d => projection([d.lon, d.lat])[0])
+            .attr("cy", d => projection([d.lon, d.lat])[1])
+            .attr("r", Math.min(2.4 / _currentZoomK, 1.6)),
         exit => exit.remove()
     );
 }
