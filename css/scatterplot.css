@@ -1,0 +1,119 @@
+/* css/scatterplot.css — complete styling for SPLOM page (standalone, no dependencies) */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: #111;
+  color: #fff;
+  font-family: sans-serif;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.info {
+  padding: 16px 20px;
+  color: #ccc;
+  background: #111;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+  overflow-y: auto;
+  max-height: 140px;
+}
+
+.info button {
+  background: rgba(100, 150, 255, 0.8);
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.info button:hover {
+  background: rgba(100, 150, 255, 1);
+}
+
+/* Chart container: takes remaining space and scrolls */
+#chart {
+  flex: 1;
+  width: 100%;
+  overflow: auto;
+  padding: 16px;
+  background: #111;
+  display: block;
+  min-width: fit-content;
+}
+
+/* SVG and elements */
+svg {
+  display: block;
+  background: #0a0a0a;
+  border-radius: 4px;
+  margin: 0 auto;
+}
+
+.cell {
+  stroke: #222;
+  fill: #0b0b0b;
+}
+
+.label {
+  fill: #ddd;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+/* Tooltip */
+.tooltip {
+  position: absolute;
+  background: rgba(20, 20, 20, 0.98);
+  color: #ddd;
+  padding: 10px 12px;
+  border-radius: 6px;
+  pointer-events: none;
+  font-size: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
+  z-index: 2000;
+  max-width: 280px;
+  line-height: 1.3;
+}
+
+.tooltip div {
+  margin-bottom: 4px;
+}
+
+.tooltip div:last-child {
+  margin-bottom: 0;
+}
+
+.tooltip strong {
+  color: #fff;
+  font-weight: 700;
+}
+
+/* Legend */
+.splom-legend text {
+  fill: #ddd;
+  font-size: 12px;
+}

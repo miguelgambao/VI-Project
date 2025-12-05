@@ -1,57 +1,74 @@
 <!DOCTYPE html>
+
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Plane Crash Data Visualization</title>
-<script src="https://d3js.org/d3.v7.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/topojson@3"></script>
-<link rel="stylesheet" href="styles.css">
-</head>
-<body>
+	<head>
+		<meta charset="UTF-8" />
+		<title>Plane Crash Data Visualization</title>
+		<script src="https://d3js.org/d3.v7.min.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/topojson@3"></script>
+		<link rel="stylesheet" href="css/styles.css" />
+	</head>
+	<body>
+		<div class="app">
+			<div id="mapWrap" class="mapWrap">
+				<svg></svg>
+				<button
+					id="toggleRoutesBtn"
+					class="routeToggle"
+					title="Show/Hide route lines"
+				>
+					Hide routes
+				</button>
+			</div>
+			<div id="controls">
+				<div id="countDisplay" class="countDisplay">0</div>
+				<div class="countLabel">Crashes found</div>
+				<div id="sliderContainer" class="sliderBlock">
+					<div class="sliderTitle">Year Range</div>
+					<div class="sliderValue" id="yearLabel">1940 - 2009</div>
+					<div id="sliderWrapper" class="sliderWrapper">
+						<div id="sliderTrack"></div>
+						<div id="sliderRange"></div>
+						<input
+							id="startYear"
+							type="range"
+							min="1940"
+							max="2009"
+							value="1940"
+						/>
+						<input
+							id="endYear"
+							type="range"
+							min="1940"
+							max="2009"
+							value="2009"
+						/>
+					</div>
+				</div>
 
-<div class="app">
-    <div id="mapWrap" class="mapWrap">
-        <svg></svg>
-        <button id="toggleRoutesBtn" class="routeToggle" title="Show/Hide route lines">Hide routes</button>
-    </div>
-    <div id="controls">
-        <div id="countDisplay" class="countDisplay">0</div>
-        <div class="countLabel">Crashes found</div>
-        <div id="sliderContainer" class="sliderBlock">
-            <div class="sliderTitle">Year Range</div>
-            <div class="sliderValue" id="yearLabel">1940 - 2009</div>
-            <div id="sliderWrapper" class="sliderWrapper">
-                <div id="sliderTrack"></div>
-                <div id="sliderRange"></div>
-                <input id="startYear" type="range" min="1940" max="2009" value="1940">
-                <input id="endYear" type="range" min="1940" max="2009" value="2009">
-            </div>
-        </div>
-    
-        <div id="sliderContainerAboard" class="sliderBlock">
-            <div class="sliderTitle">Aboard</div>
-            <div class="sliderValue" id="aboardLabel">—</div>
-            <div id="sliderWrapperAboard" class="sliderWrapper">
-                <div class="sliderTrack"></div>
-                <div class="sliderRange" id="sliderRangeAboard"></div>
-                <input id="startAboard" type="range" min="0" max="100" value="0">
-                <input id="endAboard" type="range" min="0" max="100" value="100">
-            </div>
-        </div>
-        <div id="sliderContainerFatal" class="sliderBlock">
-            <div class="sliderTitle">Fatalities (%)</div>
-            <div class="sliderValue" id="fatalLabel">—</div>
-            <div id="sliderWrapperFatal" class="sliderWrapper">
-                <div class="sliderTrack"></div>
-                <div class="sliderRange" id="sliderRangeFatal"></div>
-                <input id="startFatal" type="range" min="0" max="100" value="0">
-                <input id="endFatal" type="range" min="0" max="100" value="100">
-            </div>
-        </div>
-        <div id="conditionsContainer" class="conditionsContainer"></div>
-    </div>
-</div>
-<script src="mapfilter.js"></script>
-
-</body>
+				<div id="sliderContainerAboard" class="sliderBlock">
+					<div class="sliderTitle">Aboard</div>
+					<div class="sliderValue" id="aboardLabel">—</div>
+					<div id="sliderWrapperAboard" class="sliderWrapper">
+						<div class="sliderTrack"></div>
+						<div class="sliderRange" id="sliderRangeAboard"></div>
+						<input id="startAboard" type="range" min="0" max="100" value="0" />
+						<input id="endAboard" type="range" min="0" max="100" value="100" />
+					</div>
+				</div>
+				<div id="sliderContainerFatal" class="sliderBlock">
+					<div class="sliderTitle">Fatalities (%)</div>
+					<div class="sliderValue" id="fatalLabel">—</div>
+					<div id="sliderWrapperFatal" class="sliderWrapper">
+						<div class="sliderTrack"></div>
+						<div class="sliderRange" id="sliderRangeFatal"></div>
+						<input id="startFatal" type="range" min="0" max="100" value="0" />
+						<input id="endFatal" type="range" min="0" max="100" value="100" />
+					</div>
+				</div>
+				<div id="conditionsContainer" class="conditionsContainer"></div>
+			</div>
+		</div>
+		<script src="js/mapfilter.js"></script>
+	</body>
 </html>
