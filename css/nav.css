@@ -9,12 +9,17 @@
 }
 .topNav .navBtn {
   display: inline-block;
-  background: rgba(20,20,20,0.85);
-  color: #fff;
-  border: 1px solid rgba(255,255,255,0.06);
-  padding: 6px 10px;
-  border-radius: 6px;
+  background: rgba(255, 255, 255, 0);
+  color: #ffffff;
+  border: 2px solid rgba(255, 255, 255, 0.90);
+  padding: 6px 15px;
+  border-radius: 20px;
   text-decoration: none;
-  font-size: 0.85rem;
+  font-size: 1rem;
 }
-.topNav .navBtn:hover { background: rgba(30,30,30,0.95); }
+.topNav .navBtn:hover {
+  background: rgba(218, 34, 34, 0.95);
+  border: 2px solid rgba(218, 34, 34, 0.95);
+  color: #fff;
+  transition: 0.2s;
+}
