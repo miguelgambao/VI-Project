@@ -474,6 +474,8 @@
 			}
 
 		const keys = Object.keys(raw[0]);
+		const latKey = keys.find(k => k.toLowerCase().includes('lat'));
+		const lonKey = keys.find(k => k.toLowerCase().includes('lon'));
 		const dateKey = keys.find(k => k.toLowerCase().includes('date'));
 		const timeKey = keys.find(k => k.toLowerCase().includes('time'));
 		const locationKey = keys.find(k => k.toLowerCase().includes('location'));
@@ -485,6 +487,19 @@
 		const fatalKey = keys.find(k => k.toLowerCase().includes('fatal')||k.toLowerCase().includes('death')||k.toLowerCase().includes('fat'));
 
 		all = raw.map(d => {
+			// parse lat/lon if present
+			let lat = null;
+			let lon = null;
+			if (latKey) {
+				let rawLat = (d[latKey] ?? '').toString().trim().replace(',', '.');
+				rawLat = rawLat.replace(/[^\d.\-]/g, '');
+				lat = rawLat === '' ? NaN : parseFloat(rawLat);
+			}
+			if (lonKey) {
+				let rawLon = (d[lonKey] ?? '').toString().trim().replace(',', '.');
+				rawLon = rawLon.replace(/[^\d.\-]/g, '');
+				lon = rawLon === '' ? NaN : parseFloat(rawLon);
+			}
 			const dateStr = dateKey ? d[dateKey] : null;
 			let year = null;
 			if (dateStr) { const dt = new Date(dateStr); if (!isNaN(dt)) year = dt.getFullYear(); }
@@ -493,8 +508,8 @@
 			let aboard = null; if (aboardKey && d[aboardKey]!=null) { let r=d[aboardKey].toString().replace(/,/g,'').replace(/[^\d.\-]/g,''); aboard = r===''?null:parseFloat(r); }
 			let fatal = null; if (fatalKey && d[fatalKey]!=null) { let r=d[fatalKey].toString().replace(/,/g,'').replace(/[^\d.\-]/g,''); fatal = r===''?null:parseFloat(r); }
 			let fatalPct = null; if (aboard!=null && aboard>0 && fatal!=null && !isNaN(fatal)) fatalPct = (fatal/aboard)*100;
-			return { year, dateStr, timeStr: timeKey?d[timeKey]:'', locationStr: locationKey?d[locationKey]:'', operatorStr: operatorKey?d[operatorKey]:'', routeStr: routeKey?d[routeKey]:'', typeStr: typeKey?d[typeKey]:'', summaryStr:'', conditions, aboard, fatal, fatalPct };
-		}).filter(d=>d.year);
+			return { lat, lon, year, dateStr, timeStr: timeKey?d[timeKey]:'', locationStr: locationKey?d[locationKey]:'', operatorStr: operatorKey?d[operatorKey]:'', routeStr: routeKey?d[routeKey]:'', typeStr: typeKey?d[typeKey]:'', summaryStr:'', conditions, aboard, fatal, fatalPct };
+		}).filter(d=> !isNaN(d.lat) && !isNaN(d.lon) && d.lat>=-90 && d.lat<=90 && d.lon>=-180 && d.lon<=180 && d.year);
 
 		// populate condition checkboxes
 		const condSet = new Set(); all.forEach(d=>d.conditions.forEach(c=>condSet.add(c)));
