@@ -1,0 +1,20 @@
+/* Top-right navigation buttons (over map) */
+.topNav {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  gap: 8px;
+  z-index: 2200;
+}
+.topNav .navBtn {
+  display: inline-block;
+  background: rgba(20,20,20,0.85);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.06);
+  padding: 6px 10px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-size: 0.85rem;
+}
+.topNav .navBtn:hover { background: rgba(30,30,30,0.95); }

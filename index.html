@@ -6,7 +6,8 @@
 		<title>Plane Crash Data Visualization</title>
 		<script src="https://d3js.org/d3.v7.min.js"></script>
 		<script src="https://cdn.jsdelivr.net/npm/topojson@3"></script>
-		<link rel="stylesheet" href="styles.css" />
+		<link rel="stylesheet" href="css/map.css" />
+        <link rel="stylesheet" href="css/nav.css" />
 	</head>
 	<body>
 		<div class="app">
@@ -29,8 +30,10 @@
 				</nav>
 			</div>
 			<div id="controls">
-				<div id="countDisplay" class="countDisplay">0</div>
-				<div class="countLabel">Crashes found</div>
+				<div class="countBlock">
+					<div id="countDisplay" class="countDisplay">0</div>
+					<div class="countLabel">Crashes found</div>
+				</div>
 				<div id="sliderContainer" class="sliderBlock">
 					<div class="sliderTitle">Year Range</div>
 					<div class="sliderValue" id="yearLabel">1940 - 2009</div>
