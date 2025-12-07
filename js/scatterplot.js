@@ -5,9 +5,6 @@
     const container = d3.select('#chart');
     const btnRedraw = document.getElementById('btnRedraw');
 
-    // tooltip
-    const tooltip = d3.select('body').append('div').attr('class', 'tooltip').style('display', 'none');
-
     const VARS = [
         { key: 'Temp_Avg', label: 'Temp Avg (°C)' },
         { key: 'Precipitation', label: 'Precip (mm)' },
@@ -15,6 +12,10 @@
         { key: 'Cloud_Cover', label: 'Cloud (%)' },
         { key: 'Pressure', label: 'Pressure (hPa)' }
     ];
+
+    // Configuration for performance and appearance
+    const POINT_SIZE = 1; // Change this value to adjust point size (1-5 recommended)
+    const SAMPLE_RATE = 1.0; // Use 0.5 for 50% of data, 0.25 for 25%, 1.0 for all data
 
     function categorizeCondition(s) {
         if (!s) return 'Other';
@@ -61,7 +62,7 @@
         const cols = Object.keys(data[0]);
         const keys = detectCols(cols);
 
-        const parsed = data.map(d => {
+        let parsed = data.map(d => {
             const tmax = keys.tempMax ? parseNum(d[keys.tempMax]) : null;
             const tmin = keys.tempMin ? parseNum(d[keys.tempMin]) : null;
             const tempAvg = tmax != null && tmin != null ? (tmax + tmin) / 2 : (tmax != null ? tmax : tmin);
@@ -74,12 +75,13 @@
             return Object.assign({}, d, { Temp_Avg: tempAvg, Precipitation: precip, Wind_Max: wind, Cloud_Cover: cloud, Pressure: pressure, _cat: category });
         });
 
-        const categories = Array.from(new Set(parsed.map(d => d._cat))).sort();
+        // Apply sampling if configured (for faster rendering)
+        if (SAMPLE_RATE < 1.0) {
+            parsed = parsed.filter(() => Math.random() < SAMPLE_RATE);
+        } const categories = Array.from(new Set(parsed.map(d => d._cat))).sort();
         const color = d3.scaleOrdinal(d3.schemeCategory10).domain(categories);
 
         const pad = 16;
-        const containerNode = document.getElementById('chart');
-        const bbox = containerNode.getBoundingClientRect();
         const vars = VARS;
         const n = vars.length;
 
@@ -91,6 +93,8 @@
         const finalCellSize = minCellSize;
 
         const svg = container.append('svg').attr('width', totalW).attr('height', totalH).style('display', 'block');
+        const content = svg.append('g'); // zoom/pan layer
+        const root = content.append('g').attr('transform', `translate(${pad},${pad})`);
 
         const scales = {};
         vars.forEach(v => {
@@ -100,11 +104,9 @@
             scales[v.key] = d3.scaleLinear().domain(extent).nice().range([pad, finalCellSize - pad]);
         });
 
-        const g = svg.append('g').attr('transform', `translate(${pad},${pad})`);
-
         for (let i = 0; i < n; i++) {
             for (let j = 0; j < n; j++) {
-                const cell = g.append('g').attr('transform', `translate(${j * finalCellSize},${i * finalCellSize})`);
+                const cell = root.append('g').attr('transform', `translate(${j * finalCellSize},${i * finalCellSize})`);
                 cell.append('rect').attr('class', 'cell').attr('width', finalCellSize).attr('height', finalCellSize).attr('fill', '#0b0b0b');
 
                 const xi = vars[j];
@@ -122,19 +124,9 @@
                 cellG.selectAll('circle').data(points).enter().append('circle')
                     .attr('cx', d => xa(d[xi.key]))
                     .attr('cy', d => ya(d[yi.key]))
-                    .attr('r', 3)
+                    .attr('r', POINT_SIZE)
                     .attr('fill', d => color(d._cat))
-                    .attr('opacity', 0.9)
-                    .on('mouseover', (event, d) => {
-                        tooltip.style('display', 'block').html(`
-                            <div><strong>${xi.label}</strong>: ${d[xi.key] == null ? 'n/a' : d[xi.key]}</div>
-                            <div><strong>${yi.label}</strong>: ${d[yi.key] == null ? 'n/a' : d[yi.key]}</div>
-                            <div><strong>Category</strong>: ${d._cat}</div>
-                        `);
-                        tooltip.style('left', (event.pageX + 12) + 'px').style('top', (event.pageY + 12) + 'px');
-                    })
-                    .on('mousemove', (event) => tooltip.style('left', (event.pageX + 12) + 'px').style('top', (event.pageY + 12) + 'px'))
-                    .on('mouseout', () => tooltip.style('display', 'none'));
+                    .attr('opacity', 0.7);
 
                 const xAxis = d3.axisBottom(xa).ticks(3).tickSize(2);
                 const yAxis = d3.axisLeft(ya).ticks(3).tickSize(2);
@@ -144,7 +136,7 @@
             }
         }
 
-        const legend = svg.append('g').attr('class', 'splom-legend').attr('transform', `translate(${totalW - 160},${8})`);
+        const legend = content.append('g').attr('class', 'splom-legend').attr('transform', `translate(${totalW - 160},${8})`);
         categories.forEach((c, idx) => { const ly = idx * 18; legend.append('rect').attr('x', 0).attr('y', ly).attr('width', 12).attr('height', 12).attr('fill', color(c)); legend.append('text').attr('x', 18).attr('y', ly + 10).text(c).attr('fill', '#ddd').style('font-size', '12px'); });
     }
 
