@@ -1,19 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
+  <head>
     <meta charset="utf-8" />
     <title>Graphs - Plane Crash Data</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
-    <link rel="stylesheet" href="css/map.css" />
-    <link rel="stylesheet" href="css/graphs.css" />
-    <link rel="stylesheet" href="css/nav.css" />
+    <link rel="stylesheet" href="../css/map.css" />
+    <link rel="stylesheet" href="../css/graphs.css" />
+    <link rel="stylesheet" href="../css/nav.css" />
   </head>
   <body>
     <div class="app">
       <div id="mapWrap" class="mapWrap">
         <!-- top-left nav (same as map page) -->
         <nav class="topNav" aria-label="Primary">
-          <a class="navBtn" href="index.html">Map</a>
+          <a class="navBtn" href="../index.html">Map</a>
           <a class="navBtn" href="scatterplot.html">Scatter Matrix</a>
           <a class="navBtn" href="graphs.html">Graphs</a>
           <a class="navBtn" href="about.html">About</a>
@@ -39,15 +39,26 @@
           <div class="countLabel">Crashes found</div>
         </div>
 
-
         <div id="sliderContainer" class="sliderBlock">
           <div class="sliderTitle">Year Range</div>
           <div class="sliderValue" id="yearLabel">1940 - 2009</div>
           <div id="sliderWrapper" class="sliderWrapper">
             <div class="sliderTrack"></div>
             <div id="sliderRange" class="sliderRange"></div>
-            <input id="startYear" type="range" min="1940" max="2009" value="1940" />
-            <input id="endYear" type="range" min="1940" max="2009" value="2009" />
+            <input
+              id="startYear"
+              type="range"
+              min="1940"
+              max="2009"
+              value="1940"
+            />
+            <input
+              id="endYear"
+              type="range"
+              min="1940"
+              max="2009"
+              value="2009"
+            />
           </div>
         </div>
 
@@ -77,6 +88,6 @@
       </div>
     </div>
 
-    <script src="js/graphs.js"></script>
+    <script src="../js/graphs.js"></script>
   </body>
 </html>

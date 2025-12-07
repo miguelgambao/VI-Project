@@ -55,8 +55,8 @@
     async function draw() {
         container.selectAll('*').remove();
         let data;
-        try { data = await d3.dsv(';', 'crashesFinal.csv'); }
-        catch (err) { container.append('div').text('Failed to load crashesFinal.csv — serve files via a local server.'); console.error(err); return; }
+        try { data = await d3.dsv(';', '/data/crashesFinal.csv'); }
+        catch (err) { container.append('div').text('Failed to load /data/crashesFinal.csv — serve files via a local server.'); console.error(err); return; }
         if (!data || data.length === 0) { container.append('div').text('No rows in CSV'); return; }
 
         const cols = Object.keys(data[0]);
@@ -95,6 +95,30 @@
         const svg = container.append('svg').attr('width', totalW).attr('height', totalH).style('display', 'block');
         const content = svg.append('g'); // zoom/pan layer
         const root = content.append('g').attr('transform', `translate(${pad},${pad})`);
+
+        // Ctrl-modified zoom/pan: only activate zoom/pan when Ctrl is held so
+        // normal page scroll (wheel) continues to scroll the container.
+        let _currentZoomK = 1;
+        const zoom = d3.zoom()
+            .scaleExtent([1, 10])
+            .filter(function (event) {
+                // Allow wheel zoom only when Ctrl is pressed; allow pointer drag pan only when Ctrl is pressed.
+                if (event.type === 'wheel' || event.type === 'mousewheel') return !!event.ctrlKey;
+                if (event.type === 'mousedown' || event.type === 'touchstart' || event.type === 'pointerdown') return !!event.ctrlKey;
+                // allow other event types (dblclick, etc.)
+                return true;
+            })
+            .on('zoom', (event) => {
+                const t = event.transform;
+                _currentZoomK = t.k;
+                // apply transform to the zoom layer; keep inner `root` translation for padding
+                content.attr('transform', t);
+                // adjust circle radii so points remain visible at various zoom levels
+                const screenR = Math.max(0.5, Math.min(6, POINT_SIZE * Math.sqrt(t.k)));
+                const elR = screenR / t.k;
+                content.selectAll('circle').attr('r', elR);
+            });
+        svg.call(zoom);
 
         const scales = {};
         vars.forEach(v => {

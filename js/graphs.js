@@ -1,6 +1,6 @@
 // graphs.js - builds a single bar chart showing years with the most accidents
 (function () {
-	const csvPath = "crashesFinal.csv";
+	const csvPath = "/data/crashesFinal.csv";
 
 	const barSvg = d3.select("#barSvg");
 	let all = [];
@@ -179,8 +179,8 @@
 
 				case 'pie':
 					// aggregate by decade for pie chart
-					const decadeMap = d3.rollup(filtered, v => v.length, d => Math.floor(d.year/10)*10);
-					const decades = Array.from(decadeMap.entries()).sort((a,b)=>a[0]-b[0]).map(([dct, val])=>({ label: dct + 's', value: val }));
+					const decadeMap = d3.rollup(filtered, v => v.length, d => Math.floor(d.year / 10) * 10);
+					const decades = Array.from(decadeMap.entries()).sort((a, b) => a[0] - b[0]).map(([dct, val]) => ({ label: dct + 's', value: val }));
 					drawPie(decades);
 					break;
 				default:
@@ -204,7 +204,7 @@
 		barSvg.attr('width', w).attr('height', h);
 		barSvg.selectAll('*').remove();
 
-		const margin = {top:20,right:20,bottom: bottomPad, left:60};
+		const margin = { top: 20, right: 20, bottom: bottomPad, left: 60 };
 		const innerW = w - margin.left - margin.right;
 		const innerH = h - margin.top - margin.bottom;
 		const g = barSvg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
@@ -216,68 +216,68 @@
 			const allCounts = Array.from(d3.rollup(all, v => v.length, d => d.year).values());
 			if (allCounts.length) maxCount = d3.max(allCounts) || 1;
 		} catch (e) {
-			maxCount = d3.max(data, d=>d.count) || 1;
+			maxCount = d3.max(data, d => d.count) || 1;
 		}
 		// set y domain exactly to the maximum (do not .nice() so top equals global maximum)
-		const y = d3.scaleLinear().domain([0, maxCount]).range([innerH,0]);
+		const y = d3.scaleLinear().domain([0, maxCount]).range([innerH, 0]);
 
 		// compute ticks so the top tick equals the maxCount; use more lines for easier reading
 		const yTicks = d3.ticks(0, maxCount, 12);
 
 		// draw subtle horizontal grid lines for easier reading (behind the chart)
-		g.append('g').attr('class','grid')
+		g.append('g').attr('class', 'grid')
 			.selectAll('line').data(yTicks).enter().append('line')
 			.attr('x1', 0).attr('x2', innerW)
 			.attr('y1', d => y(d)).attr('y2', d => y(d))
 			.attr('stroke', 'rgba(255,255,255,0.045)')
 			.attr('stroke-width', 1);
 
-		const line = d3.line().x(d=>x(d.year)).y(d=>y(d.count)).curve(d3.curveMonotoneX);
+		const line = d3.line().x(d => x(d.year)).y(d => y(d.count)).curve(d3.curveMonotoneX);
 
 		// area under the line (subtle)
-		const area = d3.area().x(d=>x(d.year)).y0(innerH).y1(d=>y(d.count)).curve(d3.curveMonotoneX);
+		const area = d3.area().x(d => x(d.year)).y0(innerH).y1(d => y(d.count)).curve(d3.curveMonotoneX);
 		g.append('path').datum(data).attr('d', area).attr('fill', 'rgba(232,85,85,0.12)');
 
 		g.append('path').datum(data).attr('d', line).attr('fill', 'none').attr('stroke', '#e85555').attr('stroke-width', 2);
 
 		// points
 		g.selectAll('circle.point').data(data).enter().append('circle')
-			.attr('class','point')
-			.attr('cx', d=>x(d.year))
-			.attr('cy', d=>y(d.count))
+			.attr('class', 'point')
+			.attr('cx', d => x(d.year))
+			.attr('cy', d => y(d.count))
 			.attr('r', 3)
 			.attr('fill', '#fff')
 			.attr('stroke', '#e85555')
 			.attr('stroke-width', 1)
-			.on('mouseenter',(event,d)=>{
-				const tt = d3.select('body').append('div').attr('class','tooltip').style('display','block');
+			.on('mouseenter', (event, d) => {
+				const tt = d3.select('body').append('div').attr('class', 'tooltip').style('display', 'block');
 				tt.html(`<div><strong>${d.year}</strong></div><div>${d.count} crashes</div>`)
-					.style('left', (event.pageX+10)+'px').style('top',(event.pageY+10)+'px');
+					.style('left', (event.pageX + 10) + 'px').style('top', (event.pageY + 10) + 'px');
 			})
-			.on('mouseleave', ()=>{ d3.selectAll('body .tooltip').remove(); });
+			.on('mouseleave', () => { d3.selectAll('body .tooltip').remove(); });
 
 		// x axis ticks: pick a reasonable step so labels don't overlap
 		const range = endYear - startYear;
 		const approxTicks = Math.min(12, Math.max(1, Math.floor(range / 5)));
 		const step = Math.max(1, Math.floor(range / approxTicks));
-		const ticks = d3.range(startYear, endYear+1, step);
+		const ticks = d3.range(startYear, endYear + 1, step);
 
 		const xAxis = d3.axisBottom(x).tickValues(ticks).tickFormat(d3.format('d'));
 		// compute ticks so the top tick equals the maxCount (reuse yTicks declared above)
 		const yAxis = d3.axisLeft(y).tickValues(yTicks);
 
-		g.append('g').attr('transform', `translate(0,${innerH})`).call(xAxis).selectAll('text').style('fill','#ddd').style('font-size','11px');
-		g.append('g').call(yAxis).selectAll('text').style('fill','#ddd').style('font-size','11px');
+		g.append('g').attr('transform', `translate(0,${innerH})`).call(xAxis).selectAll('text').style('fill', '#ddd').style('font-size', '11px');
+		g.append('g').call(yAxis).selectAll('text').style('fill', '#ddd').style('font-size', '11px');
 
 		// y label
 		g.append('text')
 			.attr('transform', 'rotate(-90)')
 			.attr('y', -45)
-			.attr('x', -innerH/2)
+			.attr('x', -innerH / 2)
 			.attr('dy', '1em')
 			.style('text-anchor', 'middle')
 			.style('fill', '#ddd')
-			.style('font-size','12px')
+			.style('font-size', '12px')
 			.text('Crashes');
 	}
 
@@ -296,68 +296,68 @@
 		barSvg.selectAll('*').remove();
 
 		const radius = Math.min(w, h - bottomPad) / 2 - 20;
-		const centerY = h/2 - bottomPad/2;
-		const g = barSvg.append('g').attr('transform', `translate(${w/2},${centerY})`);
+		const centerY = h / 2 - bottomPad / 2;
+		const g = barSvg.append('g').attr('transform', `translate(${w / 2},${centerY})`);
 
-		const total = d3.sum(items, d=>d.value) || 1;
-		const color = d3.scaleOrdinal().domain(items.map(d=>d.label)).range(d3.schemeCategory10);
+		const total = d3.sum(items, d => d.value) || 1;
+		const color = d3.scaleOrdinal().domain(items.map(d => d.label)).range(d3.schemeCategory10);
 
-		const pie = d3.pie().value(d=>d.value).sort((a,b)=>b.value - a.value);
+		const pie = d3.pie().value(d => d.value).sort((a, b) => b.value - a.value);
 		const arc = d3.arc().innerRadius(0).outerRadius(radius);
 
 		const arcs = g.selectAll('path').data(pie(items)).enter().append('g');
 
 		arcs.append('path')
 			.attr('d', arc)
-			.attr('fill', d=>color(d.data.label))
+			.attr('fill', d => color(d.data.label))
 			.attr('stroke', '#111')
 			.attr('stroke-width', 1)
-			.on('mouseenter',(event,d)=>{
-				const tt = d3.select('body').append('div').attr('class','tooltip').style('display','block');
-				tt.html(`<div><strong>${d.data.label}</strong></div><div>${d.data.value} crashes (${Math.round((d.data.value/total)*100)}%)</div>`)
-					.style('left', (event.pageX+10)+'px').style('top',(event.pageY+10)+'px');
+			.on('mouseenter', (event, d) => {
+				const tt = d3.select('body').append('div').attr('class', 'tooltip').style('display', 'block');
+				tt.html(`<div><strong>${d.data.label}</strong></div><div>${d.data.value} crashes (${Math.round((d.data.value / total) * 100)}%)</div>`)
+					.style('left', (event.pageX + 10) + 'px').style('top', (event.pageY + 10) + 'px');
 			})
-			.on('mouseleave', ()=>{ d3.selectAll('body .tooltip').remove(); });
+			.on('mouseleave', () => { d3.selectAll('body .tooltip').remove(); });
 
 		// labels (small) - place outside arcs
 		arcs.append('text')
 			.attr('transform', d => `translate(${arc.centroid(d)})`)
 			.attr('text-anchor', 'middle')
-			.style('fill','#fff')
-			.style('font-size','11px')
+			.style('fill', '#fff')
+			.style('font-size', '11px')
 			.text(d => d.data.value > 0 ? d.data.label : '');
 
 		// legend to the right (if space)
 		const legendX = radius + 30;
 		if (w > 520) {
 			const lg = barSvg.append('g').attr('transform', `translate(${legendX + 20},${20})`);
-			items.forEach((it,i)=>{
-				lg.append('rect').attr('x',0).attr('y',i*20).attr('width',12).attr('height',12).attr('fill',color(it.label));
-				lg.append('text').attr('x',18).attr('y', i*20+10).style('fill','#ddd').style('font-size','12px').text(`${it.label} (${it.value})`);
+			items.forEach((it, i) => {
+				lg.append('rect').attr('x', 0).attr('y', i * 20).attr('width', 12).attr('height', 12).attr('fill', color(it.label));
+				lg.append('text').attr('x', 18).attr('y', i * 20 + 10).style('fill', '#ddd').style('font-size', '12px').text(`${it.label} (${it.value})`);
 			});
 		}
 	}
 
 	// wire up control events
 	function wireControls() {
-		["startYear","endYear","startAboard","endAboard","startFatal","endFatal"].forEach(id=>{
+		["startYear", "endYear", "startAboard", "endAboard", "startFatal", "endFatal"].forEach(id => {
 			const el = document.getElementById(id);
 			if (el) el.addEventListener('input', () => { renderCharts(); });
 		});
 		const condContainer = document.getElementById('conditionsContainer');
-		if (condContainer) condContainer.addEventListener('change', (e)=>{ renderCharts(); });
-		window.addEventListener('resize', () => { clearTimeout(window.__graphsResize); window.__graphsResize = setTimeout(renderCharts,120); });
+		if (condContainer) condContainer.addEventListener('change', (e) => { renderCharts(); });
+		window.addEventListener('resize', () => { clearTimeout(window.__graphsResize); window.__graphsResize = setTimeout(renderCharts, 120); });
 	}
 
 	function initChartTypeButtons() {
 		const wrap = document.getElementById('chartTypeControls');
 		if (!wrap) return;
 		wrap.querySelectorAll('.chartTypeBtn').forEach(btn => {
-			btn.addEventListener('click', (e)=>{
+			btn.addEventListener('click', (e) => {
 				const t = btn.dataset.type;
 				if (!t) return;
 				currentChart = t;
-				wrap.querySelectorAll('.chartTypeBtn').forEach(b=>b.classList.remove('active'));
+				wrap.querySelectorAll('.chartTypeBtn').forEach(b => b.classList.remove('active'));
 				btn.classList.add('active');
 				renderCharts();
 			});
@@ -388,7 +388,7 @@
 			}
 		}
 
-		if (!hasValues) return { updateRange: () => {} };
+		if (!hasValues) return { updateRange: () => { } };
 
 		start.addEventListener('input', () => {
 			let sv = parseFloat(start.value);
@@ -468,10 +468,10 @@
 
 	// parse CSV and initialize
 	d3.dsv(';', csvPath).then(raw => {
-			if (!raw || raw.length===0) {
-				console.error('CSV loaded but empty');
-				return;
-			}
+		if (!raw || raw.length === 0) {
+			console.error('CSV loaded but empty');
+			return;
+		}
 
 		const keys = Object.keys(raw[0]);
 		const latKey = keys.find(k => k.toLowerCase().includes('lat'));
@@ -482,9 +482,9 @@
 		const operatorKey = keys.find(k => k.toLowerCase().includes('operator'));
 		const routeKey = keys.find(k => k.toLowerCase().includes('route'));
 		const typeKey = keys.find(k => k.toLowerCase().includes('type'));
-		const generalKey = keys.find(k => k.toLowerCase().includes('general')||k.toLowerCase().includes('condition')||k.toLowerCase().includes('weather'));
-		const aboardKey = keys.find(k => k.toLowerCase().includes('aboard')||k.toLowerCase().includes('abo'));
-		const fatalKey = keys.find(k => k.toLowerCase().includes('fatal')||k.toLowerCase().includes('death')||k.toLowerCase().includes('fat'));
+		const generalKey = keys.find(k => k.toLowerCase().includes('general') || k.toLowerCase().includes('condition') || k.toLowerCase().includes('weather'));
+		const aboardKey = keys.find(k => k.toLowerCase().includes('aboard') || k.toLowerCase().includes('abo'));
+		const fatalKey = keys.find(k => k.toLowerCase().includes('fatal') || k.toLowerCase().includes('death') || k.toLowerCase().includes('fat'));
 
 		all = raw.map(d => {
 			// parse lat/lon if present
@@ -504,22 +504,22 @@
 			let year = null;
 			if (dateStr) { const dt = new Date(dateStr); if (!isNaN(dt)) year = dt.getFullYear(); }
 			const condRaw = generalKey ? d[generalKey] || '' : '';
-			const conditions = (condRaw||'').toString().split(/[;,]/).map(s=>s.trim()).filter(Boolean);
-			let aboard = null; if (aboardKey && d[aboardKey]!=null) { let r=d[aboardKey].toString().replace(/,/g,'').replace(/[^\d.\-]/g,''); aboard = r===''?null:parseFloat(r); }
-			let fatal = null; if (fatalKey && d[fatalKey]!=null) { let r=d[fatalKey].toString().replace(/,/g,'').replace(/[^\d.\-]/g,''); fatal = r===''?null:parseFloat(r); }
-			let fatalPct = null; if (aboard!=null && aboard>0 && fatal!=null && !isNaN(fatal)) fatalPct = (fatal/aboard)*100;
-			return { lat, lon, year, dateStr, timeStr: timeKey?d[timeKey]:'', locationStr: locationKey?d[locationKey]:'', operatorStr: operatorKey?d[operatorKey]:'', routeStr: routeKey?d[routeKey]:'', typeStr: typeKey?d[typeKey]:'', summaryStr:'', conditions, aboard, fatal, fatalPct };
-		}).filter(d=> !isNaN(d.lat) && !isNaN(d.lon) && d.lat>=-90 && d.lat<=90 && d.lon>=-180 && d.lon<=180 && d.year);
+			const conditions = (condRaw || '').toString().split(/[;,]/).map(s => s.trim()).filter(Boolean);
+			let aboard = null; if (aboardKey && d[aboardKey] != null) { let r = d[aboardKey].toString().replace(/,/g, '').replace(/[^\d.\-]/g, ''); aboard = r === '' ? null : parseFloat(r); }
+			let fatal = null; if (fatalKey && d[fatalKey] != null) { let r = d[fatalKey].toString().replace(/,/g, '').replace(/[^\d.\-]/g, ''); fatal = r === '' ? null : parseFloat(r); }
+			let fatalPct = null; if (aboard != null && aboard > 0 && fatal != null && !isNaN(fatal)) fatalPct = (fatal / aboard) * 100;
+			return { lat, lon, year, dateStr, timeStr: timeKey ? d[timeKey] : '', locationStr: locationKey ? d[locationKey] : '', operatorStr: operatorKey ? d[operatorKey] : '', routeStr: routeKey ? d[routeKey] : '', typeStr: typeKey ? d[typeKey] : '', summaryStr: '', conditions, aboard, fatal, fatalPct };
+		}).filter(d => !isNaN(d.lat) && !isNaN(d.lon) && d.lat >= -90 && d.lat <= 90 && d.lon >= -180 && d.lon <= 180 && d.year);
 
 		// populate condition checkboxes
-		const condSet = new Set(); all.forEach(d=>d.conditions.forEach(c=>condSet.add(c)));
+		const condSet = new Set(); all.forEach(d => d.conditions.forEach(c => condSet.add(c)));
 		const conds = Array.from(condSet).sort();
 		const condContainer = document.getElementById('conditionsContainer');
 		if (condContainer) {
-			if (conds.length===0) condContainer.innerHTML = '<div class="sliderTitle">Weather Conditions</div><div class="sliderValue">n/a</div>';
+			if (conds.length === 0) condContainer.innerHTML = '<div class="sliderTitle">Weather Conditions</div><div class="sliderValue">n/a</div>';
 			else {
 				let html = '<div class="sliderTitle">Weather Conditions</div><div class="conditionsList">';
-				conds.forEach((c,i)=>{ html += `<label class="condLabel"><input type="checkbox" id="gcond_${i}" data-cond="${c}"> ${c}</label>`; });
+				conds.forEach((c, i) => { html += `<label class="condLabel"><input type="checkbox" id="gcond_${i}" data-cond="${c}"> ${c}</label>`; });
 				html += '</div>';
 				condContainer.innerHTML = html;
 			}
@@ -533,8 +533,8 @@
 		initChartTypeButtons();
 
 		// set year slider bounds
-		if (all.length>0) {
-			const years = all.map(d=>d.year);
+		if (all.length > 0) {
+			const years = all.map(d => d.year);
 			const ymin = Math.min(...years); const ymax = Math.max(...years);
 			const sy = document.getElementById('startYear'); const ey = document.getElementById('endYear');
 			if (sy && ey) {
@@ -547,10 +547,10 @@
 		updateSliderRange();
 
 		// compute aboard/fatal presence and initialize dual sliders for them
-		const aboardVals = all.map(d=>d.aboard).filter(v=>v!=null && !isNaN(v));
-		const fatalVals = all.map(d=>d.fatalPct).filter(v=>v!=null && !isNaN(v));
-		const hasAboard = aboardVals.length>0;
-		const hasFatal = fatalVals.length>0;
+		const aboardVals = all.map(d => d.aboard).filter(v => v != null && !isNaN(v));
+		const fatalVals = all.map(d => d.fatalPct).filter(v => v != null && !isNaN(v));
+		const hasAboard = aboardVals.length > 0;
+		const hasFatal = fatalVals.length > 0;
 
 		// initialize slider input ranges and labels
 		if (hasAboard) {
@@ -579,11 +579,11 @@
 			const fl = document.getElementById('fatalLabel'); if (fl) fl.textContent = 'n/a';
 		}
 
-		const aboardSetup = setupDual('sliderWrapperAboard','startAboard','endAboard','sliderRangeAboard','aboardLabel', hasAboard, false);
-		const fatalSetup = setupDual('sliderWrapperFatal','startFatal','endFatal','sliderRangeFatal','fatalLabel', hasFatal, true);
+		const aboardSetup = setupDual('sliderWrapperAboard', 'startAboard', 'endAboard', 'sliderRangeAboard', 'aboardLabel', hasAboard, false);
+		const fatalSetup = setupDual('sliderWrapperFatal', 'startFatal', 'endFatal', 'sliderRangeFatal', 'fatalLabel', hasFatal, true);
 
 		renderCharts();
-	}).catch(err=>{ console.error('failed to load CSV', err); const cc = document.getElementById('conditionsContainer'); if(cc) cc.innerHTML = '<div class="sliderTitle">Weather Conditions</div><div class="sliderValue">CSV load failed</div>'; });
+	}).catch(err => { console.error('failed to load CSV', err); const cc = document.getElementById('conditionsContainer'); if (cc) cc.innerHTML = '<div class="sliderTitle">Weather Conditions</div><div class="sliderValue">CSV load failed</div>'; });
 
 })();
 
