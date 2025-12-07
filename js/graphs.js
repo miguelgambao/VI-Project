@@ -1,6 +1,6 @@
 // graphs.js - builds a single bar chart showing years with the most accidents
 (function () {
-	const csvPath = "crashesFinal.csv";
+	const csvPath = "../data/crashesFinal.csv";
 
 	const barSvg = d3.select("#barSvg");
 	let all = [];

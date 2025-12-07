@@ -55,7 +55,7 @@
     async function draw() {
         container.selectAll('*').remove();
         let data;
-        try { data = await d3.dsv(';', 'crashesFinal.csv'); }
+        try { data = await d3.dsv(';', '../data/crashesFinal.csv'); }
         catch (err) { container.append('div').text('Failed to load crashesFinal.csv — serve files via a local server.'); console.error(err); return; }
         if (!data || data.length === 0) { container.append('div').text('No rows in CSV'); return; }
 

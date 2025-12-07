@@ -84,7 +84,7 @@ Promise.all([
   fetch("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(
     (r) => r.json()
   ),
-  d3.dsv(";", "crashesFinal.csv"),
+  d3.dsv(";", "data/crashesFinal.csv"),
 ]).then(([worldData, crashData]) => {
   // Detect columns
   const keys = Object.keys(crashData[0]);
