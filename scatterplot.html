@@ -4,28 +4,22 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>SPLOM — Crashes</title>
-    <link rel="stylesheet" href="css/scatterplot.css" />
+    
     <script src="https://d3js.org/d3.v7.min.js"></script>
+    
+    <link rel="stylesheet" href="css/nav.css" />
+    <link rel="stylesheet" href="css/scatterplot.css" />
     <!-- all styles for scatterplot are in css/scatterplot.css -->
   </head>
   <body>
     <div id="main">
-      <div class="info">
-        Variables: <strong>Temp_Avg</strong> (from Temp_Max/Temp_Min),
-        <strong>Precipitation</strong>, <strong>Wind</strong>,
-        <strong>Cloud</strong>, <strong>Pressure</strong> &nbsp;•&nbsp;Color:
-        categorized <code>General_Conditions</code> (Clear, Cloudy, Rain, Fog,
-        Snow, Windy, Severe, Other) &nbsp;•&nbsp;<button
-          id="btnRedraw"
-          style="padding: 6px 8px; border-radius: 6px"
-        >
-          Redraw
-        </button>
-        <div style="margin-top: 8px; color: #bbb; font-size: 0.9rem">
-          Hover points to see values. This is a minimal/test implementation.
-          Resize window to redraw automatically.
-        </div>
-      </div>
+      <!-- top-left nav (same as map page) -->
+      <nav class="topNav" aria-label="Primary">
+        <a class="navBtn" href="index.html">Map</a>
+        <a class="navBtn" href="scatterplot.html">Scatter Matrix</a>
+        <a class="navBtn" href="graphs.html">Graphs</a>
+        <a class="navBtn" href="about.html">About</a>
+      </nav>
 
       <div id="chart"></div>
 
