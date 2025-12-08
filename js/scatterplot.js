@@ -80,14 +80,21 @@
             parsed = parsed.filter(() => Math.random() < SAMPLE_RATE);
         } const categories = Array.from(new Set(parsed.map(d => d._cat))).sort();
 
-        // Use the perceptually-uniform 'plasma' palette sampled across categories
-        const PALETTE = 'viridis';
-        const interp = PALETTE === 'viridis' ? d3.interpolatePlasma : d3.interpolateViridis;
+        // Use the requested categorical color mapping (explicit mapping)
+        const colorMap = {
+            'Severe': '#ff0000', // bright red (pop)
+            'Fog': 'cyan',       // high contrast
+            'Windy': 'yellow',   // windy highlighted
+            'Rain': 'mediumpurple',
+            'Cloudy': 'dimgray', // push to background
+            'Other': 'green'
+        };
         const catList = categories.slice();
+        const paletteFallback = d3.schemeCategory10 || ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'];
         const color = (cat) => {
+            if (cat && colorMap[cat]) return colorMap[cat];
             const i = Math.max(0, catList.indexOf(cat));
-            const t = catList.length <= 1 ? 0 : i / (catList.length - 1);
-            return interp(t);
+            return paletteFallback[i % paletteFallback.length];
         };
 
         const pad = 16;
@@ -109,11 +116,29 @@
         // Circles use the configured POINT_SIZE and are not adjusted dynamically.
 
         const scales = {};
+        const scalesInfo = {};
         vars.forEach(v => {
             const arr = parsed.map(d => d[v.key]).filter(x => x != null && !isNaN(x));
             const extent = d3.extent(arr.length ? arr : [0, 1]);
             if (extent[0] === extent[1]) { extent[0] = extent[0] - 1; extent[1] = extent[1] + 1; }
-            scales[v.key] = d3.scaleLinear().domain(extent).nice().range([pad, finalCellSize - pad]);
+
+            // Only apply symlog to Precipitation; leave other variables linear.
+            if (v.key === 'Precipitation') {
+                const posVals = arr.filter(x => x > 0);
+                const minPos = posVals.length ? d3.min(posVals) : null;
+                const maxVal = extent[1];
+                // choose a small offset to start slightly before zero
+                const offset = minPos ? Math.max(minPos / 10, 0.1) : 0.1;
+                const domainLower = -offset; // start a bit before zero
+                const domainUpper = Math.max(1, maxVal);
+                const s = d3.scaleSymlog().domain([domainLower, domainUpper]).range([pad, finalCellSize - pad]);
+                s.constant(offset);
+                scales[v.key] = s;
+                scalesInfo[v.key] = 'symlog';
+            } else {
+                scales[v.key] = d3.scaleLinear().domain(extent).nice().range([pad, finalCellSize - pad]);
+                scalesInfo[v.key] = 'linear';
+            }
         });
 
         for (let i = 0; i < n; i++) {
@@ -131,6 +156,27 @@
 
                 const points = parsed.filter(d => d[xi.key] != null && !isNaN(d[xi.key]) && d[yi.key] != null && !isNaN(d[yi.key]));
 
+                // Drawing order: draw low-priority categories first so high-priority
+                // categories are rendered on top. Cloudy & Rain should be at the bottom;
+                // Severe, Fog, Windy should be drawn last (on top).
+                const drawPriority = {
+                    'Cloudy': 0,
+                    'Rain': 0,
+                    'Other': 1,
+                    'Snow': 1,
+                    'Clear': 1,
+                    'Severe': 2,
+                    'Fog': 2,
+                    'Windy': 2
+                };
+                points.sort((a, b) => {
+                    const pa = drawPriority[a._cat] !== undefined ? drawPriority[a._cat] : 1;
+                    const pb = drawPriority[b._cat] !== undefined ? drawPriority[b._cat] : 1;
+                    if (pa !== pb) return pa - pb; // lower priority first
+                    // tie-breaker: preserve category order from catList
+                    return (catList.indexOf(a._cat) - catList.indexOf(b._cat));
+                });
+
                 const cellG = cell.append('g').attr('transform', `translate(${pad},${pad})`);
 
                 cellG.selectAll('circle').data(points).enter().append('circle')
@@ -140,8 +186,26 @@
                     .attr('fill', d => color(d._cat))
                     .attr('opacity', 0.3);
 
-                const xAxis = d3.axisBottom(xa).ticks(3).tickSize(2);
-                const yAxis = d3.axisLeft(ya).ticks(3).tickSize(2);
+                let xAxis = d3.axisBottom(xa).ticks(3).tickSize(2);
+                let yAxis = d3.axisLeft(ya).ticks(3).tickSize(2);
+                // If this axis is the precipitation axis, show the selected ticks only.
+                if (xi.key === 'Precipitation') {
+                    // candidate ticks updated per request
+                    const candidates = [0, 1, 2, 5, 10, 40, 140];
+                    const dom = scales[xi.key].domain();
+                    const ticks = candidates.filter(t => t >= dom[0] && t <= dom[1]);
+                    xAxis = d3.axisBottom(xa).tickValues(ticks).tickFormat(d3.format('d')).tickSize(2);
+                } else if (scalesInfo[xi.key] === 'symlog') {
+                    xAxis = d3.axisBottom(xa).ticks(5).tickFormat(d3.format('.2s')).tickSize(2);
+                }
+                if (yi.key === 'Precipitation') {
+                    const candidatesY = [0, 1, 2, 5, 10, 20, 50, 140];
+                    const domY = scales[yi.key].domain();
+                    const ticksY = candidatesY.filter(t => t >= domY[0] && t <= domY[1]);
+                    yAxis = d3.axisLeft(ya).tickValues(ticksY).tickFormat(d3.format('d')).tickSize(2);
+                } else if (scalesInfo[yi.key] === 'symlog') {
+                    yAxis = d3.axisLeft(ya).ticks(5).tickFormat(d3.format('.2s')).tickSize(2);
+                }
 
                 cellG.append('g').attr('transform', `translate(0,${finalCellSize - pad * 2})`).call(xAxis).selectAll('text').style('fill', '#aaa');
                 cellG.append('g').call(yAxis).selectAll('text').style('fill', '#aaa');
