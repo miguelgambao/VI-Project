@@ -81,8 +81,8 @@
         } const categories = Array.from(new Set(parsed.map(d => d._cat))).sort();
 
         // Use the perceptually-uniform 'plasma' palette sampled across categories
-        const PALETTE = 'plasma';
-        const interp = PALETTE === 'plasma' ? d3.interpolatePlasma : d3.interpolateViridis;
+        const PALETTE = 'viridis';
+        const interp = PALETTE === 'viridis' ? d3.interpolatePlasma : d3.interpolateViridis;
         const catList = categories.slice();
         const color = (cat) => {
             const i = Math.max(0, catList.indexOf(cat));
