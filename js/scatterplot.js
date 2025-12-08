@@ -55,8 +55,8 @@
     async function draw() {
         container.selectAll('*').remove();
         let data;
-        try { data = await d3.dsv(';', '../data/crashesFinal.csv'); }
-        catch (err) { container.append('div').text('Failed to load crashesFinal.csv — serve files via a local server.'); console.error(err); return; }
+        try { data = await d3.dsv(';', '/data/crashesFinal.csv'); }
+        catch (err) { container.append('div').text('Failed to load /data/crashesFinal.csv — serve files via a local server.'); console.error(err); return; }
         if (!data || data.length === 0) { container.append('div').text('No rows in CSV'); return; }
 
         const cols = Object.keys(data[0]);
@@ -79,7 +79,16 @@
         if (SAMPLE_RATE < 1.0) {
             parsed = parsed.filter(() => Math.random() < SAMPLE_RATE);
         } const categories = Array.from(new Set(parsed.map(d => d._cat))).sort();
-        const color = d3.scaleOrdinal(d3.schemeCategory10).domain(categories);
+
+        // Use the perceptually-uniform 'plasma' palette sampled across categories
+        const PALETTE = 'plasma';
+        const interp = PALETTE === 'plasma' ? d3.interpolatePlasma : d3.interpolateViridis;
+        const catList = categories.slice();
+        const color = (cat) => {
+            const i = Math.max(0, catList.indexOf(cat));
+            const t = catList.length <= 1 ? 0 : i / (catList.length - 1);
+            return interp(t);
+        };
 
         const pad = 16;
         const vars = VARS;
@@ -96,29 +105,8 @@
         const content = svg.append('g'); // zoom/pan layer
         const root = content.append('g').attr('transform', `translate(${pad},${pad})`);
 
-        // Ctrl-modified zoom/pan: only activate zoom/pan when Ctrl is held so
-        // normal page scroll (wheel) continues to scroll the container.
-        let _currentZoomK = 1;
-        const zoom = d3.zoom()
-            .scaleExtent([1, 10])
-            .filter(function (event) {
-                // Allow wheel zoom only when Ctrl is pressed; allow pointer drag pan only when Ctrl is pressed.
-                if (event.type === 'wheel' || event.type === 'mousewheel') return !!event.ctrlKey;
-                if (event.type === 'mousedown' || event.type === 'touchstart' || event.type === 'pointerdown') return !!event.ctrlKey;
-                // allow other event types (dblclick, etc.)
-                return true;
-            })
-            .on('zoom', (event) => {
-                const t = event.transform;
-                _currentZoomK = t.k;
-                // apply transform to the zoom layer; keep inner `root` translation for padding
-                content.attr('transform', t);
-                // adjust circle radii so points remain visible at various zoom levels
-                const screenR = Math.max(0.5, Math.min(6, POINT_SIZE * Math.sqrt(t.k)));
-                const elR = screenR / t.k;
-                content.selectAll('circle').attr('r', elR);
-            });
-        svg.call(zoom);
+        // Zoom removed: keep the SPLOM static. No wheel or button handlers.
+        // Circles use the configured POINT_SIZE and are not adjusted dynamically.
 
         const scales = {};
         vars.forEach(v => {
@@ -150,7 +138,7 @@
                     .attr('cy', d => ya(d[yi.key]))
                     .attr('r', POINT_SIZE)
                     .attr('fill', d => color(d._cat))
-                    .attr('opacity', 0.7);
+                    .attr('opacity', 0.3);
 
                 const xAxis = d3.axisBottom(xa).ticks(3).tickSize(2);
                 const yAxis = d3.axisLeft(ya).ticks(3).tickSize(2);
@@ -160,8 +148,13 @@
             }
         }
 
-        const legend = content.append('g').attr('class', 'splom-legend').attr('transform', `translate(${totalW - 160},${8})`);
-        categories.forEach((c, idx) => { const ly = idx * 18; legend.append('rect').attr('x', 0).attr('y', ly).attr('width', 12).attr('height', 12).attr('fill', color(c)); legend.append('text').attr('x', 18).attr('y', ly + 10).text(c).attr('fill', '#ddd').style('font-size', '12px'); });
+        // Create an HTML legend to the right of the SVG so labels don't overlap the plot.
+        const legendDiv = container.append('div').attr('class', 'splom-legend');
+        categories.forEach((c) => {
+            const item = legendDiv.append('div').attr('class', 'legend-item');
+            item.append('div').attr('class', 'legend-swatch').style('background', color(c));
+            item.append('div').attr('class', 'legend-label').text(c);
+        });
     }
 
     btnRedraw && btnRedraw.addEventListener('click', draw);
