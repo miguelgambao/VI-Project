@@ -1,3 +1,41 @@
+/* Bottom axis controls */
+.bottomAxisControls {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	background: #181818;
+	border-radius: 8px;
+	box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+	padding: 6px 12px;
+}
+.bottomAxisLabel {
+	font-size: 13px;
+	color: #ddd;
+	margin-right: 8px;
+}
+.bottomAxisBtn {
+	background: rgba(255,255,255,0);
+	color: #ffffff;
+	border: 2px solid rgba(255,255,255,0.90);
+	padding: 6px 12px;
+	border-radius: 15px;
+	font-size: 0.85rem;
+	font-weight: 700;
+	box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+	margin-right: 4px;
+	transition: background 0.18s, border 0.18s;
+	cursor: pointer;
+}
+.bottomAxisBtn:hover {
+	background: rgba(218,34,34,0.95);
+	border-color: rgba(218,34,34,0.95);
+	color: #fff;
+}
+.bottomAxisBtn.active {
+	background: rgba(218,34,34,0.95);
+	border-color: rgba(218,34,34,0.95);
+	color: #fff;
+}
 /* Additional styles for graphs page */
 .charts {
 	display: flex;

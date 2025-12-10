@@ -1,3 +1,5 @@
+// bottom axis type: 'years' | 'weather'
+let currentBottomAxis = 'years';
 // graphs.js - builds a single bar chart showing years with the most accidents
 
 	const csvPath = "../data/crashesFinal.csv";
@@ -205,9 +207,37 @@
 					drawLine(yearData, startYear, endYear);
 					break;
 				case 'bar':
-					// use yearData for bar chart, each bar is a year, ordered right to left by value
-					const sortedYearData = [...yearData].sort((a, b) => b.value - a.value);
-					drawBar(sortedYearData);
+					if (currentBottomAxis === 'years') {
+						// use yearData for bar chart, each bar is a year, ordered right to left by value
+						const sortedYearData = [...yearData].sort((a, b) => b.value - a.value).slice(0, 25);
+						drawBar(sortedYearData);
+					} else if (currentBottomAxis === 'weather') {
+						// Group by weather condition and sum values
+						const groupMap = {
+							clear: ["clear"],
+							foggy: ["fog"],
+							rainy: ["rain", "heavy rain"],
+							cloudy: ["mostly cloudy", "overcast", "partly cloudy"],
+							snowy: ["snow"],
+							windy: ["windy", "storm-level winds", "thunderstorms"]
+						};
+						let weatherCounts = [];
+						for (const [group, subconds] of Object.entries(groupMap)) {
+							let value = 0;
+							for (const item of yearData) {
+								// Find all records for this year
+								const records = all.filter(d => d.year === item.year);
+								for (const rec of records) {
+									if (rec.conditions && rec.conditions.some(cond => subconds.some(sub => cond.toLowerCase().includes(sub)))) {
+										value += currentAxis === 'crashes' ? 1 : (rec.fatal || 0);
+									}
+								}
+							}
+							weatherCounts.push({ year: group.charAt(0).toUpperCase() + group.slice(1), value });
+						}
+						weatherCounts = weatherCounts.sort((a, b) => b.value - a.value).slice(0, 25);
+						drawBar(weatherCounts);
+					}
 					break;
 				default:
 					drawLine(yearData, startYear, endYear);
@@ -320,54 +350,121 @@
 		barSvg.attr('width', w).attr('height', h);
 		barSvg.selectAll('*').remove();
 
-		const margin = { top: 40, right: 40, bottom: 60, left: 60 };
+		// Increase bottom margin for more space for year labels
+		const margin = { top: 40, right: 40, bottom: 110, left: 60 };
 		const innerW = w - margin.left - margin.right;
 		const innerH = h - margin.top - margin.bottom;
 		const g = barSvg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
 
-		const x = d3.scaleBand()
-			.domain(items.map(d => d.year))
-			.range([0, innerW])
-			.padding(0.15);
+		let x;
+		if (currentBottomAxis === 'weather') {
+			x = d3.scalePoint()
+				.domain(items.map(d => d.year))
+				.range([0, innerW])
+				.padding(0.5);
+		} else {
+			x = d3.scaleBand()
+				.domain(items.map(d => d.year))
+				.range([0, innerW])
+				.padding(0.15);
+		}
+		// Use correct max value for y-axis
+		let maxValue = 1;
+		if (currentBottomAxis === 'weather') {
+			maxValue = d3.max(items, d => d.value) || 1;
+		} else if (currentAxis === 'crashes') {
+			const allCounts = Array.from(d3.rollup(all, v => v.length, d => d.year).values());
+			if (allCounts.length) maxValue = d3.max(allCounts) || 1;
+		} else {
+			const allFatal = Array.from(d3.rollup(all, v => d3.sum(v, d => d.fatal || 0), d => d.year).values());
+			if (allFatal.length) maxValue = d3.max(allFatal) || 1;
+		}
 		const y = d3.scaleLinear()
-			.domain([0, d3.max(items, d => d.value)])
+			.domain([0, maxValue])
 			.range([innerH, 0]);
 
-		// x-axis
-		g.append('g')
+		// x-axis with year tick labels for every bar, centered and visible
+		const years = items.map(d => d.year);
+		const xAxisG = g.append('g')
 			.attr('transform', `translate(0,${innerH})`)
-			.call(d3.axisBottom(x).tickFormat(d => d))
-			.selectAll('text')
-			.attr('transform', 'rotate(-45)')
-			.style('text-anchor', 'end');
+			.style('z-index', 20)
+			.call(d3.axisBottom(x)
+				.tickValues(years)
+				.tickFormat(d => d)
+			);
+		xAxisG.selectAll('text')
+			.attr('text-anchor', 'middle')
+			.attr('x', 0)
+			.attr('y', 18)
+			.attr('transform', null)
+			.style('fill', '#ddd')
+			.style('font-size', '13px')
+			.style('font-weight', 'bold')
+			.style('display', 'block')
+			.style('opacity', 1);
 
 		// y-axis
 		g.append('g')
 			.call(d3.axisLeft(y));
 
 		// bars
-		g.selectAll('.bar')
-			.data(items)
-			.enter()
-			.append('rect')
-			.attr('class', 'bar')
-			.attr('x', d => x(d.year))
-			.attr('y', d => y(d.value))
-			.attr('width', x.bandwidth())
-			.attr('height', d => innerH - y(d.value))
-			.attr('fill', '#e85555')
-			.on('mouseenter', (event, d) => {
-				const tt = d3.select('body').append('div').attr('class', 'tooltip').style('display', 'block');
-				tt.html(`<div><strong>${d.year}</strong></div><div>${d.value} ${currentAxis === 'crashes' ? 'crashes' : 'fatalities'}</div>`)
-					.style('left', (event.pageX + 10) + 'px').style('top', (event.pageY + 10) + 'px');
-			})
-			.on('mouseleave', () => { d3.selectAll('body .tooltip').remove(); });
+		if (currentBottomAxis === 'weather') {
+			// Use scalePoint, draw bars centered at each point
+			const barWidth = Math.max(24, innerW / (items.length * 2));
+			g.selectAll('.bar')
+				.data(items)
+				.enter()
+				.append('rect')
+				.attr('class', 'bar')
+				.attr('x', d => x(d.year) - barWidth / 2)
+				.attr('y', d => y(d.value))
+				.attr('width', barWidth)
+				.attr('height', d => innerH - y(d.value))
+				.attr('fill', '#e85555')
+				.on('mouseenter', (event, d) => {
+					const tt = d3.select('body').append('div').attr('class', 'tooltip').style('display', 'block');
+					tt.html(`<div><strong>${d.year}</strong></div><div>${d.value} ${currentAxis === 'crashes' ? 'crashes' : 'fatalities'}</div>`)
+						.style('left', (event.pageX + 10) + 'px').style('top', (event.pageY + 10) + 'px');
+				})
+				.on('mouseleave', () => { d3.selectAll('body .tooltip').remove(); });
+		} else {
+			g.selectAll('.bar')
+				.data(items)
+				.enter()
+				.append('rect')
+				.attr('class', 'bar')
+				.attr('x', d => x(d.year))
+				.attr('y', d => y(d.value))
+				.attr('width', x.bandwidth())
+				.attr('height', d => innerH - y(d.value))
+				.attr('fill', '#e85555')
+				.on('mouseenter', (event, d) => {
+					const tt = d3.select('body').append('div').attr('class', 'tooltip').style('display', 'block');
+					tt.html(`<div><strong>${d.year}</strong></div><div>${d.value} ${currentAxis === 'crashes' ? 'crashes' : 'fatalities'}</div>`)
+						.style('left', (event.pageX + 10) + 'px').style('top', (event.pageY + 10) + 'px');
+				})
+				.on('mouseleave', () => { d3.selectAll('body .tooltip').remove(); });
+		}
 
 		// ...removed value labels on top of bars...
 	}
 
 	// wire up control events
 	function wireControls() {
+			// bottom axis controls
+			const bottomAxisWrap = document.getElementById('bottomAxisControls');
+			if (bottomAxisWrap) {
+				bottomAxisWrap.querySelectorAll('.bottomAxisBtn').forEach(btn => {
+					btn.addEventListener('click', (e) => {
+						const t = btn.dataset.type;
+						if (!t) return;
+						currentBottomAxis = t;
+						bottomAxisWrap.querySelectorAll('.bottomAxisBtn').forEach(b => b.classList.remove('active'));
+						btn.classList.add('active');
+						renderCharts();
+					});
+				});
+			}
 		["startYear", "endYear", "startAboard", "endAboard", "startFatal", "endFatal"].forEach(id => {
 			const el = document.getElementById(id);
 			if (el) el.addEventListener('input', () => { renderCharts(); });
