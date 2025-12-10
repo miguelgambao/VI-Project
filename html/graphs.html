@@ -19,24 +19,21 @@
           <a class="navBtn" href="about.html">About</a>
         </nav>
 
-        <!-- Data selection toggles (top-right) -->
-        <nav class="dataSelectionNav" aria-label="Data Selection">
-          <button id="toggleCrashes" class="dataSelectionBtn active">
-            Crashes
-          </button>
-          <button id="toggleFatalities" class="dataSelectionBtn">
-            Fatalities
-          </button>
-        </nav>
-
         <!-- Single chart area (replaces the map) -->
         <div id="charts" class="charts">
           <div id="barWrap" class="chartBox">
             <svg id="barSvg"></svg>
-            <div id="chartTypeControls" class="chartTypeControls">
-              <div class="chartTypeLabel">Graph type:</div>
-              <button class="chartTypeBtn active" data-type="line">Line</button>
-              <button class="chartTypeBtn" data-type="pie">Pie</button>
+            <div class="chartControlsRow">
+              <div id="axisTypeControls" class="axisTypeControls">
+                <div class="axisTypeLabel">Left axis:</div>
+                <button class="axisTypeBtn active" data-type="crashes">Crashes</button>
+                <button class="axisTypeBtn" data-type="fatalities">Fatalities</button>
+              </div>
+              <div id="chartTypeControls" class="chartTypeControls">
+                <div class="chartTypeLabel">Graph type:</div>
+                <button class="chartTypeBtn active" data-type="line">Line</button>
+                <button class="chartTypeBtn" data-type="pie">Pie</button>
+              </div>
             </div>
           </div>
         </div>

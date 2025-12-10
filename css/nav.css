@@ -1,4 +1,7 @@
 /* Top-right navigation buttons (over map) */
+* {
+   font-family: Roboto, Sans-serif;
+}
 .topNav {
   position: absolute;
   top: 12px;

@@ -36,9 +36,19 @@ const DOT_SCREEN_MIN = 0.5; // minimum on-screen radius in px
 const DOT_SCREEN_MAX = 20; // maximum on-screen radius in px (visual cap)
 
 let _currentZoomK = 1;
+
+let isGrabbing = false;
 const zoom = d3
     .zoom()
     .scaleExtent([1, 100])
+    .on("start", () => {
+        isGrabbing = true;
+        d3.select("svg").classed("grabbing", true);
+    })
+    .on("end", () => {
+        isGrabbing = false;
+        d3.select("svg").classed("grabbing", false);
+    })
     .on("zoom", (event) => {
         const { transform } = event;
         _currentZoomK = transform.k;
