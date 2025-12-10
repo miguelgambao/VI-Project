@@ -285,16 +285,7 @@
 		g.append('g').attr('transform', `translate(0,${innerH})`).call(xAxis).selectAll('text').style('fill', '#ddd').style('font-size', '11px');
 		g.append('g').call(yAxis).selectAll('text').style('fill', '#ddd').style('font-size', '11px');
 
-		// y label
-		g.append('text')
-			.attr('transform', 'rotate(-90)')
-			.attr('y', -45)
-			.attr('x', -innerH / 2)
-			.attr('dy', '1em')
-			.style('text-anchor', 'middle')
-			.style('fill', '#ddd')
-			.style('font-size', '12px')
-			.text(currentAxis === 'crashes' ? 'Crashes' : 'Fatalities');
+		// ...removed y-axis title label...
 	}
 
 
