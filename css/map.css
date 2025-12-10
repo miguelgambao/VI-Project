@@ -21,7 +21,11 @@ svg {
   width: 100%;
   height: 100%;
   display: block;
-  cursor: grab;
+  cursor: default;
+}
+
+.grabbing {
+  cursor: grabbing !important;
 }
 
 /* toggle button overlaid on the map (bottom-right) */

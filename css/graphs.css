@@ -69,13 +69,14 @@
 	border: 2px solid rgba(255,255,255,0.90);
 	padding: 6px 12px;
 	border-radius: 15px;
-	cursor: pointer;
 	font-size: 0.85rem;
 	font-weight: 700;
 	box-shadow: 0 6px 18px rgba(0,0,0,0.5);
 	margin-right: 4px;
 	transition: background 0.18s, border 0.18s;
+	cursor: default;
 }
+
 .axisTypeBtn:hover, .chartTypeBtn:hover {
 	transition: 0.15s;
 	background: rgba(218,34,34,0.95);
