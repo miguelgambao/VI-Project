@@ -368,23 +368,34 @@ Promise.all([
     } else {
         // initialize selected set empty (no condition filter by default)
         filters.conditionsSelected = new Set();
-        let html = '<div class="sliderTitle">Weather Conditions</div>';
+        // Use the same grouped keywords as the graph filters
+        let html = '<div class="sliderTitle" style="margin-bottom:4px;">Weather Conditions</div>';
+        html += '<div class="axisTypeControls" style="margin-bottom:8px;">';
+        html += '<div class="axisTypeLabel" style="font-size:13px;color:#ddd;margin-right:8px;">Select:</div>';
+        html += '</div>';
         html += '<div class="conditionsList">';
-        conds.forEach((c, i) => {
-            const id = "cond_" + i;
-            // start unchecked
-            html += `<label class="condLabel"><input type="checkbox" id="${id}" data-cond="${c}"> ${c}</label>`;
+        const groups = [
+            { label: "Clear", value: "clear" },
+            { label: "Foggy", value: "foggy" },
+            { label: "Rainy", value: "rainy" },
+            { label: "Cloudy", value: "cloudy" },
+            { label: "Snowy", value: "snowy" },
+            { label: "Windy", value: "windy" }
+        ];
+        groups.forEach((g, i) => {
+            const id = "gcond_" + i;
+            html += `<label class="condLabel"><input type="checkbox" id="${id}" data-cond="${g.value}"> ${g.label}</label>`;
         });
         html += "</div>";
         condContainer.innerHTML = html;
 
-        // wire events
-        conds.forEach((c, i) => {
-            const id = "cond_" + i;
+        // wire events for grouped checkboxes
+        groups.forEach((g, i) => {
+            const id = "gcond_" + i;
             const cb = document.getElementById(id);
             cb.addEventListener("change", (e) => {
-                if (e.target.checked) filters.conditionsSelected.add(c);
-                else filters.conditionsSelected.delete(c);
+                if (e.target.checked) filters.conditionsSelected.add(g.value);
+                else filters.conditionsSelected.delete(g.value);
                 drawDots();
             });
         });
@@ -664,14 +675,33 @@ function drawDots() {
     }
 
     // apply weather condition checkbox filters (if present)
-    // when checkboxes are selected we require the crash to include ALL selected conditions (AND)
+    // Use the same groupMap as graphs.js for matching
     if (f.conditionsSelected && f.conditionsSelected.size > 0) {
+        const groupMap = {
+            clear: ["clear"],
+            foggy: ["fog"],
+            rainy: ["rain", "heavy rain"],
+            cloudy: ["mostly cloudy", "overcast", "partly cloudy"],
+            snowy: ["snow"],
+            windy: ["windy", "storm-level winds", "thunderstorms"]
+        };
         const selected = Array.from(f.conditionsSelected);
-        filtered = filtered.filter(
-            (d) =>
-                Array.isArray(d.conditions) &&
-                selected.every((s) => d.conditions.includes(s))
-        );
+        filtered = filtered.filter((d) => {
+            if (!Array.isArray(d.conditions)) return false;
+            for (const group of selected) {
+                const subconds = groupMap[group];
+                if (!subconds) return false;
+                let found = false;
+                for (const sub of subconds) {
+                    if (d.conditions.some(cond => cond.toLowerCase().includes(sub))) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) return false;
+            }
+            return true;
+        });
     }
 
     // update crash count display

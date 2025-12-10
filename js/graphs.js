@@ -149,7 +149,27 @@
 			if (d.fatalPct == null || d.fatalPct < f.fatalStart || d.fatalPct > f.fatalEnd) return false;
 			if (f.conds.size > 0) {
 				if (!Array.isArray(d.conditions)) return false;
-				for (const c of f.conds) if (!d.conditions.includes(c)) return false;
+				// Weather condition groups
+				const groupMap = {
+					clear: ["clear"],
+					foggy: ["fog"],
+					rainy: ["rain", "heavy rain"],
+					cloudy: ["mostly cloudy", "overcast", "partly cloudy"],
+					snowy: ["snow"],
+					windy: ["windy", "storm-level winds", "thunderstorms"]
+				};
+				for (const group of f.conds) {
+					const subconds = groupMap[group];
+					if (!subconds) continue;
+					let found = false;
+					for (const sub of subconds) {
+						if (d.conditions.some(cond => cond.toLowerCase().includes(sub))) {
+							found = true;
+							break;
+						}
+					}
+					if (!found) return false;
+				}
 			}
 			return true;
 		});
@@ -534,18 +554,23 @@
 			return { lat, lon, year, dateStr, timeStr: timeKey ? d[timeKey] : '', locationStr: locationKey ? d[locationKey] : '', operatorStr: operatorKey ? d[operatorKey] : '', routeStr: routeKey ? d[routeKey] : '', typeStr: typeKey ? d[typeKey] : '', summaryStr: '', conditions, aboard, fatal, fatalPct };
 		}).filter(d => !isNaN(d.lat) && !isNaN(d.lon) && d.lat >= -90 && d.lat <= 90 && d.lon >= -180 && d.lon <= 180 && d.year);
 
-		// populate condition checkboxes
-		const condSet = new Set(); all.forEach(d => d.conditions.forEach(c => condSet.add(c)));
-		const conds = Array.from(condSet).sort();
+		// populate grouped condition checkboxes
 		const condContainer = document.getElementById('conditionsContainer');
 		if (condContainer) {
-			if (conds.length === 0) condContainer.innerHTML = '<div class="sliderTitle">Weather Conditions</div><div class="sliderValue">n/a</div>';
-			else {
-				let html = '<div class="sliderTitle">Weather Conditions</div><div class="conditionsList">';
-				conds.forEach((c, i) => { html += `<label class="condLabel"><input type="checkbox" id="gcond_${i}" data-cond="${c}"> ${c}</label>`; });
-				html += '</div>';
-				condContainer.innerHTML = html;
-			}
+			let html = '<div class="sliderTitle">Weather Conditions</div><div class="conditionsList">';
+			const groups = [
+				{ label: "Clear", value: "clear" },
+				{ label: "Foggy", value: "foggy" },
+				{ label: "Rainy", value: "rainy" },
+				{ label: "Cloudy", value: "cloudy" },
+				{ label: "Snowy", value: "snowy" },
+				{ label: "Windy", value: "windy" }
+			];
+			groups.forEach((g, i) => {
+				html += `<label class="condLabel"><input type="checkbox" id="gcond_${i}" data-cond="${g.value}"> ${g.label}</label>`;
+			});
+			html += '</div>';
+			condContainer.innerHTML = html;
 		}
 
 		console.log('CSV parsed - raw rows:', raw.length, 'records with year:', all.length);
