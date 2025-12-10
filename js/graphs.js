@@ -184,12 +184,10 @@
 				case 'line':
 					drawLine(yearData, startYear, endYear);
 					break;
-
-				case 'pie':
-					// aggregate by decade for pie chart
-					const decadeMap = d3.rollup(filtered, v => v.length, d => Math.floor(d.year / 10) * 10);
-					const decades = Array.from(decadeMap.entries()).sort((a, b) => a[0] - b[0]).map(([dct, val]) => ({ label: dct + 's', value: val }));
-					drawPie(decades);
+				case 'bar':
+					// use yearData for bar chart, each bar is a year, ordered right to left by value
+					const sortedYearData = [...yearData].sort((a, b) => b.value - a.value);
+					drawBar(sortedYearData);
 					break;
 				default:
 					drawLine(yearData, startYear, endYear);
@@ -302,58 +300,59 @@
 
 
 
-	function drawPie(items) {
-		// items: [{label, value}, ...]
+	function drawBar(items) {
+		// items: [{year, value}, ...]
 		const container = document.getElementById('barWrap');
 		const rect = container ? container.getBoundingClientRect() : { width: 600, height: 400 };
 		const w = Math.max(320, rect.width || 420);
 		const h = Math.max(320, rect.height || 320);
-		// shift pie up a bit so bottom-right controls don't overlap legend or slices
-		const bottomPad = 72;
 		barSvg.attr('width', w).attr('height', h);
 		barSvg.selectAll('*').remove();
 
-		const radius = Math.min(w, h - bottomPad) / 2 - 20;
-		const centerY = h / 2 - bottomPad / 2;
-		const g = barSvg.append('g').attr('transform', `translate(${w / 2},${centerY})`);
+		const margin = { top: 40, right: 40, bottom: 60, left: 60 };
+		const innerW = w - margin.left - margin.right;
+		const innerH = h - margin.top - margin.bottom;
+		const g = barSvg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
 
-		const total = d3.sum(items, d => d.value) || 1;
-		const color = d3.scaleOrdinal().domain(items.map(d => d.label)).range(d3.schemeCategory10);
+		const x = d3.scaleBand()
+			.domain(items.map(d => d.year))
+			.range([0, innerW])
+			.padding(0.15);
+		const y = d3.scaleLinear()
+			.domain([0, d3.max(items, d => d.value)])
+			.range([innerH, 0]);
 
-		const pie = d3.pie().value(d => d.value).sort((a, b) => b.value - a.value);
-		const arc = d3.arc().innerRadius(0).outerRadius(radius);
+		// x-axis
+		g.append('g')
+			.attr('transform', `translate(0,${innerH})`)
+			.call(d3.axisBottom(x).tickFormat(d => d))
+			.selectAll('text')
+			.attr('transform', 'rotate(-45)')
+			.style('text-anchor', 'end');
 
-		const arcs = g.selectAll('path').data(pie(items)).enter().append('g');
+		// y-axis
+		g.append('g')
+			.call(d3.axisLeft(y));
 
-		arcs.append('path')
-			.attr('d', arc)
-			.attr('fill', d => color(d.data.label))
-			.attr('stroke', '#111')
-			.attr('stroke-width', 1)
+		// bars
+		g.selectAll('.bar')
+			.data(items)
+			.enter()
+			.append('rect')
+			.attr('class', 'bar')
+			.attr('x', d => x(d.year))
+			.attr('y', d => y(d.value))
+			.attr('width', x.bandwidth())
+			.attr('height', d => innerH - y(d.value))
+			.attr('fill', '#e85555')
 			.on('mouseenter', (event, d) => {
 				const tt = d3.select('body').append('div').attr('class', 'tooltip').style('display', 'block');
-				tt.html(`<div><strong>${d.data.label}</strong></div><div>${d.data.value} crashes (${Math.round((d.data.value / total) * 100)}%)</div>`)
+				tt.html(`<div><strong>${d.year}</strong></div><div>${d.value} ${currentAxis === 'crashes' ? 'crashes' : 'fatalities'}</div>`)
 					.style('left', (event.pageX + 10) + 'px').style('top', (event.pageY + 10) + 'px');
 			})
 			.on('mouseleave', () => { d3.selectAll('body .tooltip').remove(); });
 
-		// labels (small) - place outside arcs
-		arcs.append('text')
-			.attr('transform', d => `translate(${arc.centroid(d)})`)
-			.attr('text-anchor', 'middle')
-			.style('fill', '#fff')
-			.style('font-size', '11px')
-			.text(d => d.data.value > 0 ? d.data.label : '');
-
-		// legend to the right (if space)
-		const legendX = radius + 30;
-		if (w > 520) {
-			const lg = barSvg.append('g').attr('transform', `translate(${legendX + 20},${20})`);
-			items.forEach((it, i) => {
-				lg.append('rect').attr('x', 0).attr('y', i * 20).attr('width', 12).attr('height', 12).attr('fill', color(it.label));
-				lg.append('text').attr('x', 18).attr('y', i * 20 + 10).style('fill', '#ddd').style('font-size', '12px').text(`${it.label} (${it.value})`);
-			});
-		}
+		// ...removed value labels on top of bars...
 	}
 
 	// wire up control events
