@@ -34,55 +34,72 @@
 
 
 /* Tooltip for charts (also used by bar/pie interactions) */
-.chartBox .tooltip,
-.tooltip {
+/* Controls row for chart and axis type */
+.chartControlsRow {
+	display: flex;
+	flex-direction: row;
+	gap: 16px;
 	position: absolute;
-	pointer-events: none;
-	background: rgba(20, 20, 20, 0.95);
-	color: #fff;
-	padding: 8px 10px;
-	border-radius: 6px;
-	box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
+	bottom: 12px;
+	left: 18px;
+	z-index: 10;
+	align-items: center;
+}
+
+.axisTypeControls, .chartTypeControls {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	background: #181818;
+	border-radius: 8px;
+	box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+	padding: 6px 12px;
+}
+.axisTypeLabel, .chartTypeLabel {
+	font-size: 13px;
+	color: #ddd;
+	margin-right: 8px;
+}
+
+
+/* Unified button style for axis and chart type */
+.axisTypeBtn, .chartTypeBtn {
+	background: rgba(255,255,255,0);
+	color: #ffffff;
+	border: 2px solid rgba(255,255,255,0.90);
+	padding: 6px 12px;
+	border-radius: 15px;
+	cursor: pointer;
 	font-size: 0.85rem;
-	max-width: 300px;
-	line-height: 1.25;
-	z-index: 2000;
-	font-weight: 100;
+	font-weight: 700;
+	box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+	margin-right: 4px;
+	transition: background 0.18s, border 0.18s;
 }
-
-.tooltip .k {
-	font-weight: 100;
-	margin-right: 6px;
-	color: #ed4343;
+.axisTypeBtn:hover, .chartTypeBtn:hover {
+	transition: 0.15s;
+	background: rgba(218,34,34,0.95);
+	border-color: rgba(218,34,34,0.95);
+	color: #fff;
 }
-.tooltip div { margin-bottom: 4px; }
-.tooltip div:last-child { margin-bottom: 0; }
-
-/* bar label styling (counts above bars) */
-.barLabel {
-	fill: #ddd;
-	font-size: 11px;
+.axisTypeBtn.active, .chartTypeBtn.active {
+	background: rgba(218,34,34,0.95);
+	border-color: rgba(218,34,34,0.95);
+	color: #fff;
 }
-
-/* ensure chart SVG shows full content */
-.chartBox svg { overflow: visible; }
-
-/* Small responsive tweaks */
-@media (max-width: 900px) {
-	.charts { flex-direction: column; }
-	.chartBox { height: 50vh; }
+.axisTypeBtn:last-child, .chartTypeBtn:last-child {
+	margin-right: 0;
 }
 
 /* Chart type controls (bottom of chart area) */
 .chartTypeControls {
-	/* position like the route toggle in the map (bottom-right overlay) */
-	position: absolute;
-	right: 12px;
-	bottom: 12px;
-	z-index: 2200;
 	display: flex;
-	gap: 6px;
-	padding: 4px 6px;
+	align-items: center;
+	gap: 8px;
+	background: #181818;
+	border-radius: 8px;
+	box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+	padding: 6px 12px;
 }
 .chartTypeBtn {
 	/* Match route toggle visuals: transparent base, bold text, rounded pill, white border */
@@ -109,13 +126,11 @@
 }
 
 /* small label placed before the chart buttons */
-.chartTypeLabel {
+.chartTypeLabel, .axisTypeLabel {
 	color: #e8e8e8;
 	font-size: 0.82rem;
 	font-weight: 700;
 	align-self: center;
 	padding: 6px 8px;
-	border-radius: 10px;
-	background: rgba(255,255,255,0.02);
 }
 

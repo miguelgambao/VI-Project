@@ -1,13 +1,13 @@
 // graphs.js - builds a single bar chart showing years with the most accidents
-(function () {
-	const csvPath = "../data/crashesFinal.csv";
 
+	const csvPath = "../data/crashesFinal.csv";
 	const barSvg = d3.select("#barSvg");
 	let all = [];
 
 	// current chart type: 'line' | 'pie'
 	let currentChart = 'line';
-
+	// axis type: 'crashes' | 'fatalities'
+	let currentAxis = 'crashes';
 
 	// slider elements (year dual-slider visuals and interactions)
 	const startSlider = document.getElementById("startYear");
@@ -89,7 +89,7 @@
 			e.preventDefault();
 			const pct = pctFromEvent(e);
 			const min = parseInt(startSlider.min);
-			const max = parseInt(startSlider.max);
+			const max = parseInt(endSlider.max);
 
 			const startPct = (parseInt(startSlider.value) - min) / (max - min);
 			const endPct = (parseInt(endSlider.value) - min) / (max - min);
@@ -165,16 +165,24 @@
 			const startYear = f.startY;
 			const endYear = f.endY;
 			// prepare counts by year
-			const yearCounts = d3.rollup(filtered, v => v.length, d => d.year);
-			const countsMap = new Map(yearCounts);
-			const yearsSeq = [];
-			for (let y = startYear; y <= endYear; y++) yearsSeq.push(y);
-			const full = yearsSeq.map(y => ({ year: y, count: countsMap.get(y) || 0 }));
+			let yearData;
+			if (currentAxis === 'crashes') {
+				const yearCounts = d3.rollup(filtered, v => v.length, d => d.year);
+				const countsMap = new Map(yearCounts);
+				yearData = [];
+				for (let y = startYear; y <= endYear; y++) yearData.push({ year: y, value: countsMap.get(y) || 0 });
+			} else {
+				// fatalities by year
+				const yearFatal = d3.rollup(filtered, v => d3.sum(v, d => d.fatal || 0), d => d.year);
+				const fatalMap = new Map(yearFatal);
+				yearData = [];
+				for (let y = startYear; y <= endYear; y++) yearData.push({ year: y, value: fatalMap.get(y) || 0 });
+			}
 
 			// choose renderer based on current chart type
 			switch (currentChart) {
 				case 'line':
-					drawLine(full, startYear, endYear);
+					drawLine(yearData, startYear, endYear);
 					break;
 
 				case 'pie':
@@ -184,7 +192,7 @@
 					drawPie(decades);
 					break;
 				default:
-					drawLine(full, startYear, endYear);
+					drawLine(yearData, startYear, endYear);
 			}
 		} catch (err) {
 			console.error('renderCharts error', err);
@@ -211,18 +219,23 @@
 
 		const x = d3.scaleLinear().domain([startYear, endYear]).range([0, innerW]);
 		// use the global maximum (across the entire dataset) so the y-axis top stays constant
-		let maxCount = 1;
+		let maxValue = 1;
 		try {
-			const allCounts = Array.from(d3.rollup(all, v => v.length, d => d.year).values());
-			if (allCounts.length) maxCount = d3.max(allCounts) || 1;
+			if (currentAxis === 'crashes') {
+				const allCounts = Array.from(d3.rollup(all, v => v.length, d => d.year).values());
+				if (allCounts.length) maxValue = d3.max(allCounts) || 1;
+			} else {
+				const allFatal = Array.from(d3.rollup(all, v => d3.sum(v, d => d.fatal || 0), d => d.year).values());
+				if (allFatal.length) maxValue = d3.max(allFatal) || 1;
+			}
 		} catch (e) {
-			maxCount = d3.max(data, d => d.count) || 1;
+			maxValue = d3.max(data, d => d.value) || 1;
 		}
 		// set y domain exactly to the maximum (do not .nice() so top equals global maximum)
-		const y = d3.scaleLinear().domain([0, maxCount]).range([innerH, 0]);
+		const y = d3.scaleLinear().domain([0, maxValue]).range([innerH, 0]);
 
-		// compute ticks so the top tick equals the maxCount; use more lines for easier reading
-		const yTicks = d3.ticks(0, maxCount, 12);
+		// compute ticks so the top tick equals the maxValue; use more lines for easier reading
+		const yTicks = d3.ticks(0, maxValue, 12);
 
 		// draw subtle horizontal grid lines for easier reading (behind the chart)
 		g.append('g').attr('class', 'grid')
@@ -232,10 +245,10 @@
 			.attr('stroke', 'rgba(255,255,255,0.045)')
 			.attr('stroke-width', 1);
 
-		const line = d3.line().x(d => x(d.year)).y(d => y(d.count)).curve(d3.curveMonotoneX);
+		const line = d3.line().x(d => x(d.year)).y(d => y(d.value)).curve(d3.curveMonotoneX);
 
 		// area under the line (subtle)
-		const area = d3.area().x(d => x(d.year)).y0(innerH).y1(d => y(d.count)).curve(d3.curveMonotoneX);
+		const area = d3.area().x(d => x(d.year)).y0(innerH).y1(d => y(d.value)).curve(d3.curveMonotoneX);
 		g.append('path').datum(data).attr('d', area).attr('fill', 'rgba(232,85,85,0.12)');
 
 		g.append('path').datum(data).attr('d', line).attr('fill', 'none').attr('stroke', '#e85555').attr('stroke-width', 2);
@@ -244,15 +257,20 @@
 		g.selectAll('circle.point').data(data).enter().append('circle')
 			.attr('class', 'point')
 			.attr('cx', d => x(d.year))
-			.attr('cy', d => y(d.count))
+			.attr('cy', d => y(d.value))
 			.attr('r', 3)
 			.attr('fill', '#fff')
 			.attr('stroke', '#e85555')
 			.attr('stroke-width', 1)
 			.on('mouseenter', (event, d) => {
 				const tt = d3.select('body').append('div').attr('class', 'tooltip').style('display', 'block');
-				tt.html(`<div><strong>${d.year}</strong></div><div>${d.count} crashes</div>`)
-					.style('left', (event.pageX + 10) + 'px').style('top', (event.pageY + 10) + 'px');
+				if (currentAxis === 'crashes') {
+					tt.html(`<div><strong>${d.year}</strong></div><div>${d.value} crashes</div>`)
+						.style('left', (event.pageX + 10) + 'px').style('top', (event.pageY + 10) + 'px');
+				} else {
+					tt.html(`<div><strong>${d.year}</strong></div><div>${d.value} fatalities</div>`)
+						.style('left', (event.pageX + 10) + 'px').style('top', (event.pageY + 10) + 'px');
+				}
 			})
 			.on('mouseleave', () => { d3.selectAll('body .tooltip').remove(); });
 
@@ -263,7 +281,7 @@
 		const ticks = d3.range(startYear, endYear + 1, step);
 
 		const xAxis = d3.axisBottom(x).tickValues(ticks).tickFormat(d3.format('d'));
-		// compute ticks so the top tick equals the maxCount (reuse yTicks declared above)
+		// compute ticks so the top tick equals the maxValue (reuse yTicks declared above)
 		const yAxis = d3.axisLeft(y).tickValues(yTicks);
 
 		g.append('g').attr('transform', `translate(0,${innerH})`).call(xAxis).selectAll('text').style('fill', '#ddd').style('font-size', '11px');
@@ -278,7 +296,7 @@
 			.style('text-anchor', 'middle')
 			.style('fill', '#ddd')
 			.style('font-size', '12px')
-			.text('Crashes');
+			.text(currentAxis === 'crashes' ? 'Crashes' : 'Fatalities');
 	}
 
 
@@ -350,18 +368,33 @@
 	}
 
 	function initChartTypeButtons() {
-		const wrap = document.getElementById('chartTypeControls');
-		if (!wrap) return;
-		wrap.querySelectorAll('.chartTypeBtn').forEach(btn => {
-			btn.addEventListener('click', (e) => {
-				const t = btn.dataset.type;
-				if (!t) return;
-				currentChart = t;
-				wrap.querySelectorAll('.chartTypeBtn').forEach(b => b.classList.remove('active'));
-				btn.classList.add('active');
-				renderCharts();
+		const chartWrap = document.getElementById('chartTypeControls');
+		if (chartWrap) {
+			chartWrap.querySelectorAll('.chartTypeBtn').forEach(btn => {
+				btn.addEventListener('click', (e) => {
+					const t = btn.dataset.type;
+					if (!t) return;
+					currentChart = t;
+					chartWrap.querySelectorAll('.chartTypeBtn').forEach(b => b.classList.remove('active'));
+					btn.classList.add('active');
+					renderCharts();
+				});
 			});
-		});
+		}
+		// axis type buttons
+		const axisWrap = document.getElementById('axisTypeControls');
+		if (axisWrap) {
+			axisWrap.querySelectorAll('.axisTypeBtn').forEach(btn => {
+				btn.addEventListener('click', (e) => {
+					const t = btn.dataset.type;
+					if (!t) return;
+					currentAxis = t;
+					axisWrap.querySelectorAll('.axisTypeBtn').forEach(b => b.classList.remove('active'));
+					btn.classList.add('active');
+					renderCharts();
+				});
+			});
+		}
 	}
 
 	// Generic setup for dual sliders (aboard/fatal) — adapted from map page
@@ -585,5 +618,5 @@
 		renderCharts();
 	}).catch(err => { console.error('failed to load CSV', err); const cc = document.getElementById('conditionsContainer'); if (cc) cc.innerHTML = '<div class="sliderTitle">Weather Conditions</div><div class="sliderValue">CSV load failed</div>'; });
 
-})();
+// ...existing code...
 
