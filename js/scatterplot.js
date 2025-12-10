@@ -82,12 +82,12 @@
 
         // Use the requested categorical color mapping (explicit mapping)
         const colorMap = {
-            'Severe': '#ff0000', // bright red (pop)
-            'Fog': 'cyan',       // high contrast
-            'Windy': 'yellow',   // windy highlighted
-            'Rain': 'mediumpurple',
-            'Cloudy': 'dimgray', // push to background
-            'Other': 'green'
+            'Severe': '#FF3333',   // Bright Red - most visible, represents danger
+            'Rain': '#00CCFF',     // Cyan / Light Blue - represents water, bright and visible
+            'Cloudy': '#B0B0B0',   // Light Grey / Silver - neutral background context
+            'Fog': '#00FF99',      // Mint Green / Teal - distinct from Rain and Severe
+            'Windy': '#FFD700',    // Yellow / Gold - universal caution color
+            'Other': '#888888'     // Dark grey for "Other" category
         };
         const catList = categories.slice();
         const paletteFallback = d3.schemeCategory10 || ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'];
@@ -101,12 +101,20 @@
         const vars = VARS;
         const n = vars.length;
 
-        // Force a minimum size that exceeds viewport so content scrolls
-        // Use window dimensions as the base, not container (which is limited by layout)
-        const minCellSize = 150; // minimum cell size to force scrolling
-        const totalW = minCellSize * n + pad * 2;
-        const totalH = minCellSize * n + pad * 2;
-        const finalCellSize = minCellSize;
+        // Get container dimensions for responsive sizing
+        const containerRect = container.node().getBoundingClientRect();
+        // Container width includes its padding, height does too but we need to account for navbar
+        const navbarHeight = 72; // navbar is fixed at top with 72px total (padding + nav height)
+        const containerW = containerRect.width || window.innerWidth - 32;
+        const containerH = (containerRect.height - navbarHeight) || window.innerHeight - 172; // subtract navbar space from available height
+
+        // Calculate cell size to fill the available space without scrolling
+        const cellSizeFromWidth = (containerW - pad * 2) / n;
+        const cellSizeFromHeight = (containerH - pad * 2) / n;
+        const finalCellSize = Math.min(cellSizeFromWidth, cellSizeFromHeight);
+
+        const totalW = finalCellSize * n + pad * 2;
+        const totalH = finalCellSize * n + pad * 2;
 
         const svg = container.append('svg').attr('width', totalW).attr('height', totalH).style('display', 'block');
         const content = svg.append('g'); // zoom/pan layer
