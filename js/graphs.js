@@ -212,7 +212,7 @@ let currentBottomAxis = 'years';
 						const sortedYearData = [...yearData].sort((a, b) => b.value - a.value).slice(0, 25);
 						drawBar(sortedYearData);
 					} else if (currentBottomAxis === 'weather') {
-						// Group by weather condition and sum values
+						// Only show conditions from the selected filter group(s)
 						const groupMap = {
 							clear: ["clear"],
 							foggy: ["fog"],
@@ -221,20 +221,26 @@ let currentBottomAxis = 'years';
 							snowy: ["snow"],
 							windy: ["windy", "storm-level winds", "thunderstorms"]
 						};
-						let weatherCounts = [];
-						for (const [group, subconds] of Object.entries(groupMap)) {
-							let value = 0;
-							for (const item of yearData) {
-								// Find all records for this year
-								const records = all.filter(d => d.year === item.year);
-								for (const rec of records) {
-									if (rec.conditions && rec.conditions.some(cond => subconds.some(sub => cond.toLowerCase().includes(sub)))) {
-										value += currentAxis === 'crashes' ? 1 : (rec.fatal || 0);
-									}
+						// Get selected filter groups
+						const selectedGroups = Array.from(document.querySelectorAll('.conditionsList input[type="checkbox"]:checked')).map(cb => cb.dataset.cond);
+						let allowedConds = [];
+						for (const group of selectedGroups) {
+							if (groupMap[group]) allowedConds = allowedConds.concat(groupMap[group]);
+						}
+						allowedConds = allowedConds.map(s => s.toLowerCase());
+						const conditionCounts = {};
+						for (const rec of filtered) {
+							if (rec.conditions && rec.conditions.length) {
+								for (const cond of rec.conditions) {
+									const key = cond.trim().toLowerCase();
+									if (!key) continue;
+									if (allowedConds.length && !allowedConds.includes(key)) continue;
+									if (!conditionCounts[key]) conditionCounts[key] = 0;
+									conditionCounts[key] += currentAxis === 'crashes' ? 1 : (rec.fatal || 0);
 								}
 							}
-							weatherCounts.push({ year: group.charAt(0).toUpperCase() + group.slice(1), value });
 						}
+						let weatherCounts = Object.entries(conditionCounts).map(([cond, value]) => ({ year: cond.charAt(0).toUpperCase() + cond.slice(1), value }));
 						weatherCounts = weatherCounts.sort((a, b) => b.value - a.value).slice(0, 25);
 						drawBar(weatherCounts);
 					}
