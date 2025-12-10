@@ -8,10 +8,6 @@
 	// current chart type: 'line' | 'pie'
 	let currentChart = 'line';
 
-	// data selection toggles: which datasets to show
-	let showCrashes = true;
-	let showFatalities = false;
-
 
 	// slider elements (year dual-slider visuals and interactions)
 	const startSlider = document.getElementById("startYear");
@@ -168,38 +164,27 @@
 			const f = getFilters();
 			const startYear = f.startY;
 			const endYear = f.endY;
-
-			// prepare counts by year for crashes
+			// prepare counts by year
 			const yearCounts = d3.rollup(filtered, v => v.length, d => d.year);
 			const countsMap = new Map(yearCounts);
-
-			// prepare fatalities by year
-			const yearFatalities = d3.rollup(filtered, v => d3.sum(v, d => d.fatal || 0), d => d.year);
-			const fatalitiesMap = new Map(yearFatalities);
-
 			const yearsSeq = [];
 			for (let y = startYear; y <= endYear; y++) yearsSeq.push(y);
-			const crashData = yearsSeq.map(y => ({ year: y, count: countsMap.get(y) || 0 }));
-			const fatalData = yearsSeq.map(y => ({ year: y, count: fatalitiesMap.get(y) || 0 }));
+			const full = yearsSeq.map(y => ({ year: y, count: countsMap.get(y) || 0 }));
 
 			// choose renderer based on current chart type
 			switch (currentChart) {
 				case 'line':
-					drawLine(crashData, fatalData, startYear, endYear);
+					drawLine(full, startYear, endYear);
 					break;
 
 				case 'pie':
 					// aggregate by decade for pie chart
-					const decadeMapCrashes = d3.rollup(filtered, v => v.length, d => Math.floor(d.year / 10) * 10);
-					const decadesCrashes = Array.from(decadeMapCrashes.entries()).sort((a, b) => a[0] - b[0]).map(([dct, val]) => ({ label: dct + 's', value: val }));
-
-					const decadeMapFatalities = d3.rollup(filtered, v => d3.sum(v, d => d.fatal || 0), d => Math.floor(d.year / 10) * 10);
-					const decadesFatalities = Array.from(decadeMapFatalities.entries()).sort((a, b) => a[0] - b[0]).map(([dct, val]) => ({ label: dct + 's', value: val }));
-
-					drawPie(decadesCrashes, decadesFatalities);
+					const decadeMap = d3.rollup(filtered, v => v.length, d => Math.floor(d.year / 10) * 10);
+					const decades = Array.from(decadeMap.entries()).sort((a, b) => a[0] - b[0]).map(([dct, val]) => ({ label: dct + 's', value: val }));
+					drawPie(decades);
 					break;
 				default:
-					drawLine(crashData, fatalData, startYear, endYear);
+					drawLine(full, startYear, endYear);
 			}
 		} catch (err) {
 			console.error('renderCharts error', err);
@@ -208,130 +193,83 @@
 	}
 
 
-	function drawLine(crashData, fatalData, startYear, endYear) {
+	function drawLine(data, startYear, endYear) {
 		const container = document.getElementById('barWrap');
 		const rect = container ? container.getBoundingClientRect() : { width: 600, height: 400 };
+		console.log('drawLine - container rect:', rect, 'data length:', data.length);
 		const w = Math.max(420, rect.width || 420);
 		const h = Math.max(320, rect.height || 320);
+		// leave extra bottom padding so overlay buttons don't cover axis/points
 		const bottomPad = 100;
 		barSvg.attr('width', w).attr('height', h);
 		barSvg.selectAll('*').remove();
 
-		const margin = { top: 20, right: 60, bottom: bottomPad, left: 60 };
+		const margin = { top: 20, right: 20, bottom: bottomPad, left: 60 };
 		const innerW = w - margin.left - margin.right;
 		const innerH = h - margin.top - margin.bottom;
 		const g = barSvg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
 
 		const x = d3.scaleLinear().domain([startYear, endYear]).range([0, innerW]);
+		// use the global maximum (across the entire dataset) so the y-axis top stays constant
+		let maxCount = 1;
+		try {
+			const allCounts = Array.from(d3.rollup(all, v => v.length, d => d.year).values());
+			if (allCounts.length) maxCount = d3.max(allCounts) || 1;
+		} catch (e) {
+			maxCount = d3.max(data, d => d.count) || 1;
+		}
+		// set y domain exactly to the maximum (do not .nice() so top equals global maximum)
+		const y = d3.scaleLinear().domain([0, maxCount]).range([innerH, 0]);
 
-		// Compute separate scales for crashes and fatalities
-		const maxCrash = d3.max(crashData, d => d.count) || 1;
-		const maxFatal = d3.max(fatalData, d => d.count) || 1;
+		// compute ticks so the top tick equals the maxCount; use more lines for easier reading
+		const yTicks = d3.ticks(0, maxCount, 12);
 
-		const yCrashes = d3.scaleLinear().domain([0, maxCrash]).range([innerH, 0]);
-		const yFatalities = d3.scaleLinear().domain([0, maxFatal]).range([innerH, 0]);
-
-		// Grid lines based on crashes (primary) or use fatalities if only that is selected
-		const yForGrid = showCrashes ? yCrashes : yFatalities;
-		const maxForGrid = showCrashes ? maxCrash : maxFatal;
-		const yTicksForGrid = d3.ticks(0, maxForGrid, 12);
-
-		// draw grid lines
+		// draw subtle horizontal grid lines for easier reading (behind the chart)
 		g.append('g').attr('class', 'grid')
-			.selectAll('line').data(yTicksForGrid).enter().append('line')
+			.selectAll('line').data(yTicks).enter().append('line')
 			.attr('x1', 0).attr('x2', innerW)
-			.attr('y1', d => yForGrid(d)).attr('y2', d => yForGrid(d))
+			.attr('y1', d => y(d)).attr('y2', d => y(d))
 			.attr('stroke', 'rgba(255,255,255,0.045)')
 			.attr('stroke-width', 1);
 
-		const line = d3.line().x(d => x(d.year)).y(d => d.count).curve(d3.curveMonotoneX);
-		const area = d3.area().x(d => x(d.year)).y0(innerH).y1(d => d.count).curve(d3.curveMonotoneX);
+		const line = d3.line().x(d => x(d.year)).y(d => y(d.count)).curve(d3.curveMonotoneX);
 
-		// Draw crashes if selected
-		if (showCrashes) {
-			const lineCrash = d3.line().x(d => x(d.year)).y(d => yCrashes(d.count)).curve(d3.curveMonotoneX);
-			const areaCrash = d3.area().x(d => x(d.year)).y0(innerH).y1(d => yCrashes(d.count)).curve(d3.curveMonotoneX);
+		// area under the line (subtle)
+		const area = d3.area().x(d => x(d.year)).y0(innerH).y1(d => y(d.count)).curve(d3.curveMonotoneX);
+		g.append('path').datum(data).attr('d', area).attr('fill', 'rgba(232,85,85,0.12)');
 
-			g.append('path').datum(crashData).attr('d', areaCrash).attr('fill', 'rgba(232,85,85,0.12)');
-			g.append('path').datum(crashData).attr('d', lineCrash).attr('fill', 'none').attr('stroke', '#e85555').attr('stroke-width', 2);
-			g.selectAll('circle.point-crash').data(crashData).enter().append('circle')
-				.attr('class', 'point-crash')
-				.attr('cx', d => x(d.year))
-				.attr('cy', d => yCrashes(d.count))
-				.attr('r', 3)
-				.attr('fill', '#fff')
-				.attr('stroke', '#e85555')
-				.attr('stroke-width', 1)
-				.on('mouseenter', (event, d) => {
-					const tt = d3.select('body').append('div').attr('class', 'tooltip').style('display', 'block');
-					tt.html(`<div><strong>${d.year}</strong></div><div>${d.count} crashes</div>`)
-						.style('left', (event.pageX + 10) + 'px').style('top', (event.pageY + 10) + 'px');
-				})
-				.on('mouseleave', () => { d3.selectAll('body .tooltip').remove(); });
-		}
+		g.append('path').datum(data).attr('d', line).attr('fill', 'none').attr('stroke', '#e85555').attr('stroke-width', 2);
 
-		// Draw fatalities if selected
-		if (showFatalities) {
-			const lineFatal = d3.line().x(d => x(d.year)).y(d => yFatalities(d.count)).curve(d3.curveMonotoneX);
-			const areaFatal = d3.area().x(d => x(d.year)).y0(innerH).y1(d => yFatalities(d.count)).curve(d3.curveMonotoneX);
+		// points
+		g.selectAll('circle.point').data(data).enter().append('circle')
+			.attr('class', 'point')
+			.attr('cx', d => x(d.year))
+			.attr('cy', d => y(d.count))
+			.attr('r', 3)
+			.attr('fill', '#fff')
+			.attr('stroke', '#e85555')
+			.attr('stroke-width', 1)
+			.on('mouseenter', (event, d) => {
+				const tt = d3.select('body').append('div').attr('class', 'tooltip').style('display', 'block');
+				tt.html(`<div><strong>${d.year}</strong></div><div>${d.count} crashes</div>`)
+					.style('left', (event.pageX + 10) + 'px').style('top', (event.pageY + 10) + 'px');
+			})
+			.on('mouseleave', () => { d3.selectAll('body .tooltip').remove(); });
 
-			g.append('path').datum(fatalData).attr('d', areaFatal).attr('fill', 'rgba(150,150,150,0.12)');
-			g.append('path').datum(fatalData).attr('d', lineFatal).attr('fill', 'none').attr('stroke', '#999').attr('stroke-width', 2);
-			g.selectAll('circle.point-fatal').data(fatalData).enter().append('circle')
-				.attr('class', 'point-fatal')
-				.attr('cx', d => x(d.year))
-				.attr('cy', d => yFatalities(d.count))
-				.attr('r', 3)
-				.attr('fill', '#fff')
-				.attr('stroke', '#999')
-				.attr('stroke-width', 1)
-				.on('mouseenter', (event, d) => {
-					const tt = d3.select('body').append('div').attr('class', 'tooltip').style('display', 'block');
-					tt.html(`<div><strong>${d.year}</strong></div><div>${d.count} fatalities</div>`)
-						.style('left', (event.pageX + 10) + 'px').style('top', (event.pageY + 10) + 'px');
-				})
-				.on('mouseleave', () => { d3.selectAll('body .tooltip').remove(); });
-		}
-
-		// x axis ticks
+		// x axis ticks: pick a reasonable step so labels don't overlap
 		const range = endYear - startYear;
 		const approxTicks = Math.min(12, Math.max(1, Math.floor(range / 5)));
 		const step = Math.max(1, Math.floor(range / approxTicks));
 		const ticks = d3.range(startYear, endYear + 1, step);
 
 		const xAxis = d3.axisBottom(x).tickValues(ticks).tickFormat(d3.format('d'));
+		// compute ticks so the top tick equals the maxCount (reuse yTicks declared above)
+		const yAxis = d3.axisLeft(y).tickValues(yTicks);
 
 		g.append('g').attr('transform', `translate(0,${innerH})`).call(xAxis).selectAll('text').style('fill', '#ddd').style('font-size', '11px');
+		g.append('g').call(yAxis).selectAll('text').style('fill', '#ddd').style('font-size', '11px');
 
-		// Y axes: left for crashes, right for fatalities
-		if (showCrashes && showFatalities) {
-			// Both selected - show dual axes
-			const yTicksCrash = d3.ticks(0, maxCrash, 12);
-			const yTicksFatal = d3.ticks(0, maxFatal, 12);
-
-			const yAxisCrash = d3.axisLeft(yCrashes).tickValues(yTicksCrash);
-			const yAxisFatal = d3.axisRight(yFatalities).tickValues(yTicksFatal);
-
-			g.append('g').call(yAxisCrash).selectAll('text').style('fill', '#e85555').style('font-size', '11px');
-			g.append('g').attr('transform', `translate(${innerW},0)`).call(yAxisFatal).selectAll('text').style('fill', '#999').style('font-size', '11px');
-		} else if (showCrashes) {
-			// Only crashes - single left axis
-			const yTicksCrash = d3.ticks(0, maxCrash, 12);
-			const yAxisCrash = d3.axisLeft(yCrashes).tickValues(yTicksCrash);
-			g.append('g').call(yAxisCrash).selectAll('text').style('fill', '#ddd').style('font-size', '11px');
-		} else if (showFatalities) {
-			// Only fatalities - single left axis
-			const yTicksFatal = d3.ticks(0, maxFatal, 12);
-			const yAxisFatal = d3.axisLeft(yFatalities).tickValues(yTicksFatal);
-			g.append('g').call(yAxisFatal).selectAll('text').style('fill', '#ddd').style('font-size', '11px');
-		}
-
-		// y label based on selection
-		let yLabel = '';
-		if (showCrashes && showFatalities) yLabel = 'Crashes / Fatalities';
-		else if (showCrashes) yLabel = 'Crashes';
-		else if (showFatalities) yLabel = 'Fatalities';
-
+		// y label
 		g.append('text')
 			.attr('transform', 'rotate(-90)')
 			.attr('y', -45)
@@ -340,69 +278,27 @@
 			.style('text-anchor', 'middle')
 			.style('fill', '#ddd')
 			.style('font-size', '12px')
-			.text(yLabel);
-
-		// Add legend if both are selected
-		if (showCrashes && showFatalities) {
-			const legend = g.append('g').attr('transform', `translate(${innerW - 150}, 10)`);
-
-			legend.append('rect').attr('x', 0).attr('y', 0).attr('width', 14).attr('height', 14).attr('fill', '#e85555');
-			legend.append('text').attr('x', 20).attr('y', 12).style('fill', '#ddd').style('font-size', '12px').text('Crashes');
-
-			legend.append('rect').attr('x', 0).attr('y', 20).attr('width', 14).attr('height', 14).attr('fill', '#999');
-			legend.append('text').attr('x', 20).attr('y', 32).style('fill', '#ddd').style('font-size', '12px').text('Fatalities');
-		}
+			.text('Crashes');
 	}
 
 
 
 
-	function drawPie(crashItems, fatalItems) {
+	function drawPie(items) {
+		// items: [{label, value}, ...]
 		const container = document.getElementById('barWrap');
 		const rect = container ? container.getBoundingClientRect() : { width: 600, height: 400 };
 		const w = Math.max(320, rect.width || 420);
 		const h = Math.max(320, rect.height || 320);
+		// shift pie up a bit so bottom-right controls don't overlap legend or slices
 		const bottomPad = 72;
 		barSvg.attr('width', w).attr('height', h);
 		barSvg.selectAll('*').remove();
 
-		const bothSelected = showCrashes && showFatalities;
+		const radius = Math.min(w, h - bottomPad) / 2 - 20;
+		const centerY = h / 2 - bottomPad / 2;
+		const g = barSvg.append('g').attr('transform', `translate(${w / 2},${centerY})`);
 
-		if (bothSelected) {
-			// Draw two smaller pie charts side by side, properly centered and sized
-			// Available space: w width, (h - bottomPad) height
-			// Each pie gets w/2 width, but we need padding between them
-			const padding = 40; // padding between pies
-			const availablePerPie = (w - padding) / 2;
-			const radius = Math.min(availablePerPie * 0.35, (h - bottomPad) * 0.35);
-			const centerY = (h - bottomPad) / 2 + 20;
-
-			// Crashes pie at 1/4 of width (shifted left)
-			if (showCrashes) {
-				const gCrash = barSvg.append('g').attr('transform', `translate(${w / 4},${centerY})`);
-				drawSinglePie(gCrash, crashItems, radius, 'Crashes', '#e85555');
-			}
-
-			// Fatalities pie at 3/4 of width (shifted right)
-			if (showFatalities) {
-				const gFatal = barSvg.append('g').attr('transform', `translate(${(w * 3) / 4},${centerY})`);
-				drawSinglePie(gFatal, fatalItems, radius, 'Fatalities', '#999');
-			}
-		} else {
-			// Draw single pie chart centered
-			const radius = Math.min(w, h - bottomPad) / 2 - 20;
-			const centerY = h / 2 - bottomPad / 2;
-			const g = barSvg.append('g').attr('transform', `translate(${w / 2},${centerY})`);
-
-			if (showCrashes) {
-				drawSinglePie(g, crashItems, radius, 'Crashes', '#e85555');
-			} else if (showFatalities) {
-				drawSinglePie(g, fatalItems, radius, 'Fatalities', '#999');
-			}
-		}
-	}
-
-	function drawSinglePie(g, items, radius, dataType, mainColor) {
 		const total = d3.sum(items, d => d.value) || 1;
 		const color = d3.scaleOrdinal().domain(items.map(d => d.label)).range(d3.schemeCategory10);
 
@@ -418,13 +314,12 @@
 			.attr('stroke-width', 1)
 			.on('mouseenter', (event, d) => {
 				const tt = d3.select('body').append('div').attr('class', 'tooltip').style('display', 'block');
-				const label = dataType === 'Fatalities' ? 'fatalities' : 'crashes';
-				tt.html(`<div><strong>${d.data.label}</strong></div><div>${d.data.value} ${label} (${Math.round((d.data.value / total) * 100)}%)</div>`)
+				tt.html(`<div><strong>${d.data.label}</strong></div><div>${d.data.value} crashes (${Math.round((d.data.value / total) * 100)}%)</div>`)
 					.style('left', (event.pageX + 10) + 'px').style('top', (event.pageY + 10) + 'px');
 			})
 			.on('mouseleave', () => { d3.selectAll('body .tooltip').remove(); });
 
-		// labels
+		// labels (small) - place outside arcs
 		arcs.append('text')
 			.attr('transform', d => `translate(${arc.centroid(d)})`)
 			.attr('text-anchor', 'middle')
@@ -432,15 +327,15 @@
 			.style('font-size', '11px')
 			.text(d => d.data.value > 0 ? d.data.label : '');
 
-		// Title above pie
-		g.append('text')
-			.attr('x', 0)
-			.attr('y', -radius - 10)
-			.attr('text-anchor', 'middle')
-			.style('fill', mainColor)
-			.style('font-size', '14px')
-			.style('font-weight', '700')
-			.text(dataType);
+		// legend to the right (if space)
+		const legendX = radius + 30;
+		if (w > 520) {
+			const lg = barSvg.append('g').attr('transform', `translate(${legendX + 20},${20})`);
+			items.forEach((it, i) => {
+				lg.append('rect').attr('x', 0).attr('y', i * 20).attr('width', 12).attr('height', 12).attr('fill', color(it.label));
+				lg.append('text').attr('x', 18).attr('y', i * 20 + 10).style('fill', '#ddd').style('font-size', '12px').text(`${it.label} (${it.value})`);
+			});
+		}
 	}
 
 	// wire up control events
@@ -467,35 +362,6 @@
 				renderCharts();
 			});
 		});
-	}
-
-	function initDataSelectionButtons() {
-		const crashBtn = document.getElementById('toggleCrashes');
-		const fatalBtn = document.getElementById('toggleFatalities');
-
-		if (crashBtn) {
-			crashBtn.addEventListener('click', () => {
-				// Only allow deselect if fatalities is selected
-				if (showCrashes && !showFatalities) {
-					return; // Can't deselect the only selected option
-				}
-				showCrashes = !showCrashes;
-				crashBtn.classList.toggle('active', showCrashes);
-				renderCharts();
-			});
-		}
-
-		if (fatalBtn) {
-			fatalBtn.addEventListener('click', () => {
-				// Only allow deselect if crashes is selected
-				if (showFatalities && !showCrashes) {
-					return; // Can't deselect the only selected option
-				}
-				showFatalities = !showFatalities;
-				fatalBtn.classList.toggle('active', showFatalities);
-				renderCharts();
-			});
-		}
 	}
 
 	// Generic setup for dual sliders (aboard/fatal) — adapted from map page
@@ -665,9 +531,6 @@
 
 		// chart type buttons
 		initChartTypeButtons();
-
-		// data selection buttons
-		initDataSelectionButtons();
 
 		// set year slider bounds
 		if (all.length > 0) {
