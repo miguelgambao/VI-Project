@@ -120,8 +120,35 @@
         const content = svg.append('g'); // zoom/pan layer
         const root = content.append('g').attr('transform', `translate(${pad},${pad})`);
 
-        // Zoom removed: keep the SPLOM static. No wheel or button handlers.
-        // Circles use the configured POINT_SIZE and are not adjusted dynamically.
+        // Add zoom functionality with pan constraints
+        const zoom = d3.zoom()
+            .scaleExtent([1, 10])
+            .on('zoom', (event) => {
+                // Only allow panning when zoomed in (scale > 1)
+                if (event.transform.k === 1) {
+                    // At zoom level 1, reset to identity (centered)
+                    content.attr('transform', d3.zoomIdentity);
+                } else {
+                    // When zoomed in, allow panning
+                    content.attr('transform', event.transform);
+                }
+            });
+
+        svg.call(zoom);
+
+        // Allow double-click to reset zoom with smooth animation
+        svg.on('dblclick.zoom', function (event) {
+            event.stopImmediatePropagation();
+            svg.transition()
+                .duration(750)
+                .call(zoom.transform, d3.zoomIdentity)
+                .on('end', () => {
+                    // Ensure content is reset to identity after transition
+                    content.attr('transform', d3.zoomIdentity);
+                    // Reset zoom transform on the SVG too
+                    zoom.transform(svg, d3.zoomIdentity);
+                });
+        });
 
         const scales = {};
         const scalesInfo = {};

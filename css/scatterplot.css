@@ -70,6 +70,11 @@ svg {
   display: block;
   background: #0a0a0a;
   border-radius: 4px;
+  cursor: grab;
+}
+
+svg:active {
+  cursor: grabbing;
 }
 
 .cell {
