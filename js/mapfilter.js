@@ -370,9 +370,6 @@ Promise.all([
         filters.conditionsSelected = new Set();
         // Use the same grouped keywords as the graph filters
         let html = '<div class="sliderTitle" style="margin-bottom:4px;">Weather Conditions</div>';
-        html += '<div class="axisTypeControls" style="margin-bottom:8px;">';
-        html += '<div class="axisTypeLabel" style="font-size:13px;color:#ddd;margin-right:8px;">Select:</div>';
-        html += '</div>';
         html += '<div class="conditionsList">';
         const groups = [
             { label: "Clear", value: "clear" },
