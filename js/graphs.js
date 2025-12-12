@@ -3,7 +3,7 @@ let currentBottomAxis = 'years';
 // graphs.js - builds a single bar chart showing years with the most accidents
 
 	const csvPath = "../data/crashesFinal.csv";
-	const barSvg = d3.select("#barSvg");
+	let barSvg = d3.select("#barSvg");
 	let all = [];
 
 	// current chart type: 'line' | 'pie'
@@ -179,6 +179,20 @@ let currentBottomAxis = 'years';
 
 	function renderCharts() {
 		try {
+			const barWrap = document.getElementById('barWrap');
+			const barSvgEl = document.getElementById('barSvg');
+			// Remove only the scatter matrix SVG (not #barSvg)
+			if (barWrap) {
+				barWrap.querySelectorAll('svg').forEach(svg => {
+					if (svg.id !== 'barSvg') svg.remove();
+				});
+			}
+			// By default, show #barSvg
+			if (barSvgEl) barSvgEl.style.display = '';
+			// Re-select barSvg in case it was hidden and D3 selection is stale
+			if (barSvgEl) {
+				barSvg = d3.select(barSvgEl);
+			}
 			const filtered = filterData(all);
 			console.log('renderCharts - filtered length:', filtered.length);
 			const countEl = document.getElementById("countDisplay"); if (countEl) countEl.textContent = new Intl.NumberFormat().format(filtered.length);
@@ -246,8 +260,10 @@ let currentBottomAxis = 'years';
 					}
 					break;
 				case 'scatter-matrix':
-					drawScatterMatrix(filtered);
-					break;
+					   // Hide #barSvg and draw scatter matrix SVG
+					   if (barSvgEl) barSvgEl.style.display = 'none';
+					   drawScatterMatrix(filtered);
+					   break;
 				default:
 					drawLine(yearData, startYear, endYear);
 			}
@@ -305,12 +321,30 @@ let currentBottomAxis = 'years';
 			   parsed = parsed.filter(d => VARS.some(v => d[v.key] != null && !isNaN(d[v.key])));
 			   const pad = 16;
 			   const n = VARS.length;
-			   const w = container.clientWidth || 600;
-			   const h = container.clientHeight || 600;
-			   const cellSize = Math.min((w - pad * 2) / n, (h - pad * 2) / n);
-			   const totalW = cellSize * n + pad * 2;
-			   const totalH = cellSize * n + pad * 2;
-			   const svg = d3.select(container).append('svg').attr('width', totalW).attr('height', totalH).style('display', 'block');
+			   // Use the chartBox's size, minus the controls row height
+			   const chartBox = container;
+			   const controlsRow = chartBox.querySelector('.chartControlsRow');
+			   const boxRect = chartBox.getBoundingClientRect();
+			   let controlsHeight = 0;
+			   if (controlsRow) {
+				   const crRect = controlsRow.getBoundingClientRect();
+				   controlsHeight = crRect.height + 18; // add a little extra spacing
+			   }
+			   const w = boxRect.width || 600;
+			   const h = (boxRect.height - controlsHeight) || 600;
+			   const cellWidth = (w - pad * 2) / n;
+			   const cellHeight = (h - pad * 2) / n;
+			   const totalW = cellWidth * n + pad * 2;
+			   const totalH = cellHeight * n + pad * 2;
+			   const svg = d3.select(container).append('svg')
+				   .attr('width', totalW)
+				   .attr('height', totalH)
+				   .style('display', 'block')
+				   .style('position', 'absolute')
+				   .style('top', 0)
+				   .style('left', 0)
+				   .style('right', 0)
+				   .style('bottom', controlsHeight + 'px');
 			   const root = svg.append('g').attr('transform', `translate(${pad},${pad})`);
 			   // Scales
 			   const scales = {};
@@ -318,22 +352,35 @@ let currentBottomAxis = 'years';
 				   const arr = parsed.map(d => d[v.key]).filter(x => x != null && !isNaN(x));
 				   const extent = d3.extent(arr.length ? arr : [0, 1]);
 				   if (extent[0] === extent[1]) { extent[0] = extent[0] - 1; extent[1] = extent[1] + 1; }
-				   scales[v.key] = d3.scaleLinear().domain(extent).nice().range([pad, cellSize - pad]);
+				   // Use vertical range for y, horizontal for x
+				   scales[v.key] = {
+					   x: d3.scaleLinear().domain(extent).nice().range([pad, cellWidth - pad]),
+					   y: d3.scaleLinear().domain(extent).nice().range([cellHeight - pad, pad])
+				   };
 			   });
 			   for (let i = 0; i < n; i++) {
 				   for (let j = 0; j < n; j++) {
-					   const cell = root.append('g').attr('transform', `translate(${j * cellSize},${i * cellSize})`);
-					   cell.append('rect').attr('class', 'cell').attr('width', cellSize).attr('height', cellSize).attr('fill', '#0b0b0b');
+					   const cell = root.append('g').attr('transform', `translate(${j * cellWidth},${i * cellHeight})`);
+					   cell.append('rect').attr('class', 'cell').attr('width', cellWidth).attr('height', cellHeight).attr('fill', 'none');
 					   const xi = VARS[j];
 					   const yi = VARS[i];
 					   if (i === j) {
-						   cell.append('text').attr('class', 'label').attr('x', cellSize / 2).attr('y', cellSize / 2).attr('text-anchor', 'middle').text(xi.label);
+						   cell.append('text')
+							   .attr('class', 'label')
+							   .attr('x', cellWidth / 2)
+							   .attr('y', cellHeight / 2)
+							   .attr('text-anchor', 'middle')
+							   .attr('dominant-baseline', 'middle')
+							   .attr('fill', '#ddd')
+							   .attr('font-size', Math.max(12, Math.min(cellWidth, cellHeight) * 0.18))
+							   .attr('font-weight', 700)
+							   .text(xi.label);
 						   continue;
 					   }
-					   const xa = scales[xi.key].copy().range([0, cellSize - pad * 2]);
-					   const ya = scales[yi.key].copy().range([cellSize - pad * 2, 0]);
+					   const xa = scales[xi.key].x;
+					   const ya = scales[yi.key].y;
 					   const points = parsed.filter(d => d[xi.key] != null && !isNaN(d[xi.key]) && d[yi.key] != null && !isNaN(d[yi.key]));
-					   const cellG = cell.append('g').attr('transform', `translate(${pad},${pad})`);
+					   const cellG = cell.append('g').attr('transform', `translate(0,0)`);
 					   cellG.selectAll('circle').data(points).enter().append('circle')
 						   .attr('cx', d => xa(d[xi.key]))
 						   .attr('cy', d => ya(d[yi.key]))
@@ -342,7 +389,7 @@ let currentBottomAxis = 'years';
 						   .attr('opacity', 0.3);
 					   let xAxis = d3.axisBottom(xa).ticks(3).tickSize(2);
 					   let yAxis = d3.axisLeft(ya).ticks(3).tickSize(2);
-					   cellG.append('g').attr('transform', `translate(0,${cellSize - pad * 2})`).call(xAxis).selectAll('text').style('fill', '#aaa');
+					   cellG.append('g').attr('transform', `translate(0,${cellHeight - pad})`).call(xAxis).selectAll('text').style('fill', '#aaa');
 					   cellG.append('g').call(yAxis).selectAll('text').style('fill', '#aaa');
 				   }
 			   }
