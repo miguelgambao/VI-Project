@@ -218,7 +218,7 @@
                     .attr('cx', d => xa(d[xi.key]))
                     .attr('cy', d => ya(d[yi.key]))
                     .attr('r', POINT_SIZE)
-                    .attr('fill', d => color(d._cat))
+                    .attr('fill', '#da2222f2')
                     .attr('opacity', 0.3);
 
                 let xAxis = d3.axisBottom(xa).ticks(3).tickSize(2);
@@ -247,13 +247,7 @@
             }
         }
 
-        // Create an HTML legend to the right of the SVG so labels don't overlap the plot.
-        const legendDiv = container.append('div').attr('class', 'splom-legend');
-        categories.forEach((c) => {
-            const item = legendDiv.append('div').attr('class', 'legend-item');
-            item.append('div').attr('class', 'legend-swatch').style('background', color(c));
-            item.append('div').attr('class', 'legend-label').text(c);
-        });
+        // Legend removed: all dots are now red, so no legend is needed.
     }
 
     btnRedraw && btnRedraw.addEventListener('click', draw);
