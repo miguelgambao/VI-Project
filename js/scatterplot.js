@@ -197,9 +197,45 @@
             }
         });
 
+        // Helper to compute Pearson correlation
+        function pearsonCorr(arr1, arr2) {
+            const n = arr1.length;
+            if (n === 0) return NaN;
+            const mean1 = d3.mean(arr1);
+            const mean2 = d3.mean(arr2);
+            let num = 0, den1 = 0, den2 = 0;
+            for (let k = 0; k < n; k++) {
+                const dx = arr1[k] - mean1;
+                const dy = arr2[k] - mean2;
+                num += dx * dy;
+                den1 += dx * dx;
+                den2 += dy * dy;
+            }
+            return (den1 && den2) ? num / Math.sqrt(den1 * den2) : NaN;
+        }
         for (let i = 0; i < n; i++) {
             for (let j = 0; j < n; j++) {
-                if (i > j) continue; // Only draw upper triangle and diagonal
+                if (i > j) {
+                    // Lower triangle: show correlation
+                    const xi = vars[j];
+                    const yi = vars[i];
+                    const points = parsed.filter(d => d[xi.key] != null && !isNaN(d[xi.key]) && d[yi.key] != null && !isNaN(d[yi.key]));
+                    const xVals = points.map(d => d[xi.key]);
+                    const yVals = points.map(d => d[yi.key]);
+                    const corr = pearsonCorr(xVals, yVals);
+                    root.append('g')
+                        .attr('transform', `translate(${j * finalCellSize},${i * finalCellSize})`)
+                        .append('text')
+                        .attr('x', finalCellSize / 2)
+                        .attr('y', finalCellSize / 2)
+                        .attr('text-anchor', 'middle')
+                        .attr('dominant-baseline', 'middle')
+                        .attr('fill', '#e85555')
+                        .attr('font-size', Math.max(14, finalCellSize * 0.18))
+                        .attr('font-weight', 700)
+                        .text(isNaN(corr) ? '' : corr.toFixed(2));
+                    continue;
+                }
                 const cell = root.append('g').attr('transform', `translate(${j * finalCellSize},${i * finalCellSize})`);
                 cell.append('rect').attr('class', 'cell').attr('width', finalCellSize).attr('height', finalCellSize).attr('fill', '#0b0b0b');
 
