@@ -457,20 +457,63 @@ let currentBottomAxis = 'years';
 
 	// wire up control events
 	function wireControls() {
-			// bottom axis controls
-			const bottomAxisWrap = document.getElementById('bottomAxisControls');
-			if (bottomAxisWrap) {
-				bottomAxisWrap.querySelectorAll('.bottomAxisBtn').forEach(btn => {
-					btn.addEventListener('click', (e) => {
-						const t = btn.dataset.type;
-						if (!t) return;
-						currentBottomAxis = t;
-						bottomAxisWrap.querySelectorAll('.bottomAxisBtn').forEach(b => b.classList.remove('active'));
-						btn.classList.add('active');
-						renderCharts();
-					});
+	// Bottom axis controls: enable weather only for Bar (Ordered)
+	const bottomAxisWrap = document.getElementById('bottomAxisControls');
+	const weatherBtn = bottomAxisWrap ? bottomAxisWrap.querySelector('.bottomAxisBtn[data-type="weather"]') : null;
+	const chartTypeWrap = document.getElementById('chartTypeControls');
+	if (chartTypeWrap && weatherBtn) {
+		chartTypeWrap.querySelectorAll('.chartTypeBtn').forEach(btn => {
+			btn.addEventListener('click', () => {
+				const t = btn.dataset.type;
+				if (t === 'bar') {
+					weatherBtn.classList.remove('disabled');
+					weatherBtn.disabled = false;
+				} else {
+					weatherBtn.classList.add('disabled');
+					weatherBtn.disabled = true;
+					// If currently selected, switch to years
+					if (weatherBtn.classList.contains('active')) {
+						const yearsBtn = bottomAxisWrap.querySelector('.bottomAxisBtn[data-type="years"]');
+						if (yearsBtn) {
+							yearsBtn.click();
+						}
+					}
+				}
+			});
+		});
+	}
+		// bottom axis controls
+		if (bottomAxisWrap) {
+			bottomAxisWrap.querySelectorAll('.bottomAxisBtn').forEach(btn => {
+				btn.addEventListener('click', (e) => {
+					const t = btn.dataset.type;
+					if (!t) return;
+					currentBottomAxis = t;
+					bottomAxisWrap.querySelectorAll('.bottomAxisBtn').forEach(b => b.classList.remove('active'));
+					btn.classList.add('active');
+					renderCharts();
 				});
+			});
+		}
+		// Ensure correct state on initial load
+		setTimeout(() => {
+			// If a chart type button is marked .active, set currentChart accordingly
+			const activeChartBtn = document.querySelector('.chartTypeBtn.active');
+			if (activeChartBtn && activeChartBtn.dataset.type) {
+				currentChart = activeChartBtn.dataset.type;
 			}
+			// Also update weather button state
+			if (chartTypeWrap && weatherBtn) {
+				const t = currentChart;
+				if (t === 'bar') {
+					weatherBtn.classList.remove('disabled');
+					weatherBtn.disabled = false;
+				} else {
+					weatherBtn.classList.add('disabled');
+					weatherBtn.disabled = true;
+				}
+			}
+		}, 0);
 		["startYear", "endYear", "startAboard", "endAboard", "startFatal", "endFatal"].forEach(id => {
 			const el = document.getElementById(id);
 			if (el) el.addEventListener('input', () => { renderCharts(); });

@@ -125,7 +125,7 @@ svg {
   margin-top: 6px;
   padding-top: 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.04);
-  padding-bottom: 40px;
+  padding-bottom: 100px;
 }
 .conditionsContainer .conditionsList {
   display: flex;
