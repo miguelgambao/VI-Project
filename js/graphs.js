@@ -245,9 +245,108 @@ let currentBottomAxis = 'years';
 						drawBar(weatherCounts);
 					}
 					break;
+				case 'scatter-matrix':
+					drawScatterMatrix(filtered);
+					break;
 				default:
 					drawLine(yearData, startYear, endYear);
 			}
+
+		// Draws a scatter matrix (SPLOM) using a subset of weather variables
+		function drawScatterMatrix(data) {
+			const container = document.getElementById('barWrap');
+			if (!container) return;
+			// Only remove any existing SVG, not the controls
+			const oldSvg = container.querySelector('svg');
+			if (oldSvg) oldSvg.remove();
+			const VARS = [
+				{ key: 'Temp_Avg', label: 'Temp Avg (°C)' },
+				{ key: 'Precipitation', label: 'Precip (mm)' },
+				{ key: 'Wind_Max', label: 'Wind (max)' },
+				{ key: 'Cloud_Cover', label: 'Cloud (%)' },
+				{ key: 'Pressure', label: 'Pressure (hPa)' }
+			];
+			   // Robust SPLOM logic from scatterplot.js
+			   function parseNum(v) {
+				   if (v == null) return null;
+				   const s = v.toString().trim().replace(/,/g, '.').replace(/[^0-9.\-]/g, '');
+				   if (s === '') return null;
+				   const n = parseFloat(s);
+				   return isNaN(n) ? null : n;
+			   }
+			   // Try to detect column names (for robustness)
+			   function detectCols(cols) {
+				   const lower = cols.map(c => c.toLowerCase());
+				   function find(pred) { const i = lower.findIndex(pred); return i === -1 ? null : cols[i]; }
+				   return {
+					   tempMax: find(c => c.includes('temp') && c.includes('max')) || find(c => c.includes('temp_max')),
+					   tempMin: find(c => c.includes('temp') && c.includes('min')) || find(c => c.includes('temp_min')),
+					   precip: find(c => c.includes('precip')) || find(c => c.includes('precipitation')),
+					   wind: find(c => c.includes('wind')) || find(c => c.includes('wind_max')),
+					   cloud: find(c => c.includes('cloud')) || find(c => c.includes('cloud_cover')),
+					   pressure: find(c => c.includes('press')) || find(c => c.includes('pressure')),
+				   };
+			   }
+			   // Get columns from data
+			   const cols = data.length > 0 ? Object.keys(data[0]) : [];
+			   const keys = detectCols(cols);
+			   // Parse and prepare data for SPLOM
+			   let parsed = data.map(d => {
+				   const tmax = keys.tempMax ? parseNum(d[keys.tempMax]) : null;
+				   const tmin = keys.tempMin ? parseNum(d[keys.tempMin]) : null;
+				   const tempAvg = tmax != null && tmin != null ? (tmax + tmin) / 2 : (tmax != null ? tmax : tmin);
+				   const precip = keys.precip ? parseNum(d[keys.precip]) : null;
+				   const wind = keys.wind ? parseNum(d[keys.wind]) : null;
+				   const cloud = keys.cloud ? parseNum(d[keys.cloud]) : null;
+				   const pressure = keys.pressure ? parseNum(d[keys.pressure]) : null;
+				   return Object.assign({}, d, { Temp_Avg: tempAvg, Precipitation: precip, Wind_Max: wind, Cloud_Cover: cloud, Pressure: pressure });
+			   });
+			   // Remove rows with all nulls
+			   parsed = parsed.filter(d => VARS.some(v => d[v.key] != null && !isNaN(d[v.key])));
+			   const pad = 16;
+			   const n = VARS.length;
+			   const w = container.clientWidth || 600;
+			   const h = container.clientHeight || 600;
+			   const cellSize = Math.min((w - pad * 2) / n, (h - pad * 2) / n);
+			   const totalW = cellSize * n + pad * 2;
+			   const totalH = cellSize * n + pad * 2;
+			   const svg = d3.select(container).append('svg').attr('width', totalW).attr('height', totalH).style('display', 'block');
+			   const root = svg.append('g').attr('transform', `translate(${pad},${pad})`);
+			   // Scales
+			   const scales = {};
+			   VARS.forEach(v => {
+				   const arr = parsed.map(d => d[v.key]).filter(x => x != null && !isNaN(x));
+				   const extent = d3.extent(arr.length ? arr : [0, 1]);
+				   if (extent[0] === extent[1]) { extent[0] = extent[0] - 1; extent[1] = extent[1] + 1; }
+				   scales[v.key] = d3.scaleLinear().domain(extent).nice().range([pad, cellSize - pad]);
+			   });
+			   for (let i = 0; i < n; i++) {
+				   for (let j = 0; j < n; j++) {
+					   const cell = root.append('g').attr('transform', `translate(${j * cellSize},${i * cellSize})`);
+					   cell.append('rect').attr('class', 'cell').attr('width', cellSize).attr('height', cellSize).attr('fill', '#0b0b0b');
+					   const xi = VARS[j];
+					   const yi = VARS[i];
+					   if (i === j) {
+						   cell.append('text').attr('class', 'label').attr('x', cellSize / 2).attr('y', cellSize / 2).attr('text-anchor', 'middle').text(xi.label);
+						   continue;
+					   }
+					   const xa = scales[xi.key].copy().range([0, cellSize - pad * 2]);
+					   const ya = scales[yi.key].copy().range([cellSize - pad * 2, 0]);
+					   const points = parsed.filter(d => d[xi.key] != null && !isNaN(d[xi.key]) && d[yi.key] != null && !isNaN(d[yi.key]));
+					   const cellG = cell.append('g').attr('transform', `translate(${pad},${pad})`);
+					   cellG.selectAll('circle').data(points).enter().append('circle')
+						   .attr('cx', d => xa(d[xi.key]))
+						   .attr('cy', d => ya(d[yi.key]))
+						   .attr('r', 1.5)
+						   .attr('fill', '#da2222f2')
+						   .attr('opacity', 0.3);
+					   let xAxis = d3.axisBottom(xa).ticks(3).tickSize(2);
+					   let yAxis = d3.axisLeft(ya).ticks(3).tickSize(2);
+					   cellG.append('g').attr('transform', `translate(0,${cellSize - pad * 2})`).call(xAxis).selectAll('text').style('fill', '#aaa');
+					   cellG.append('g').call(yAxis).selectAll('text').style('fill', '#aaa');
+				   }
+			   }
+		}
 		} catch (err) {
 			console.error('renderCharts error', err);
 			setStatus('Error rendering charts (see console)', true);
@@ -675,6 +774,28 @@ let currentBottomAxis = 'years';
 		const aboardKey = keys.find(k => k.toLowerCase().includes('aboard') || k.toLowerCase().includes('abo'));
 		const fatalKey = keys.find(k => k.toLowerCase().includes('fatal') || k.toLowerCase().includes('death') || k.toLowerCase().includes('fat'));
 
+		// Weather variable extraction (from scatterplot.js)
+		function parseNum(v) {
+			if (v == null) return null;
+			const s = v.toString().trim().replace(/,/g, '.').replace(/[^0-9.\-]/g, '');
+			if (s === '') return null;
+			const n = parseFloat(s);
+			return isNaN(n) ? null : n;
+		}
+		// Try to detect column names (for robustness)
+		function detectCols(cols) {
+			const lower = cols.map(c => c.toLowerCase());
+			function find(pred) { const i = lower.findIndex(pred); return i === -1 ? null : cols[i]; }
+			return {
+				tempMax: find(c => c.includes('temp') && c.includes('max')) || find(c => c.includes('temp_max')),
+				tempMin: find(c => c.includes('temp') && c.includes('min')) || find(c => c.includes('temp_min')),
+				precip: find(c => c.includes('precip')) || find(c => c.includes('precipitation')),
+				wind: find(c => c.includes('wind')) || find(c => c.includes('wind_max')),
+				cloud: find(c => c.includes('cloud')) || find(c => c.includes('cloud_cover')),
+				pressure: find(c => c.includes('press')) || find(c => c.includes('pressure')),
+			};
+		}
+		const weatherCols = detectCols(keys);
 		all = raw.map(d => {
 			// parse lat/lon if present
 			let lat = null;
@@ -697,7 +818,15 @@ let currentBottomAxis = 'years';
 			let aboard = null; if (aboardKey && d[aboardKey] != null) { let r = d[aboardKey].toString().replace(/,/g, '').replace(/[^\d.\-]/g, ''); aboard = r === '' ? null : parseFloat(r); }
 			let fatal = null; if (fatalKey && d[fatalKey] != null) { let r = d[fatalKey].toString().replace(/,/g, '').replace(/[^\d.\-]/g, ''); fatal = r === '' ? null : parseFloat(r); }
 			let fatalPct = null; if (aboard != null && aboard > 0 && fatal != null && !isNaN(fatal)) fatalPct = (fatal / aboard) * 100;
-			return { lat, lon, year, dateStr, timeStr: timeKey ? d[timeKey] : '', locationStr: locationKey ? d[locationKey] : '', operatorStr: operatorKey ? d[operatorKey] : '', routeStr: routeKey ? d[routeKey] : '', typeStr: typeKey ? d[typeKey] : '', summaryStr: '', conditions, aboard, fatal, fatalPct };
+			// Weather variables
+			const tmax = weatherCols.tempMax ? parseNum(d[weatherCols.tempMax]) : null;
+			const tmin = weatherCols.tempMin ? parseNum(d[weatherCols.tempMin]) : null;
+			const tempAvg = tmax != null && tmin != null ? (tmax + tmin) / 2 : (tmax != null ? tmax : tmin);
+			const precip = weatherCols.precip ? parseNum(d[weatherCols.precip]) : null;
+			const wind = weatherCols.wind ? parseNum(d[weatherCols.wind]) : null;
+			const cloud = weatherCols.cloud ? parseNum(d[weatherCols.cloud]) : null;
+			const pressure = weatherCols.pressure ? parseNum(d[weatherCols.pressure]) : null;
+			return { lat, lon, year, dateStr, timeStr: timeKey ? d[timeKey] : '', locationStr: locationKey ? d[locationKey] : '', operatorStr: operatorKey ? d[operatorKey] : '', routeStr: routeKey ? d[routeKey] : '', typeStr: typeKey ? d[typeKey] : '', summaryStr: '', conditions, aboard, fatal, fatalPct, Temp_Avg: tempAvg, Precipitation: precip, Wind_Max: wind, Cloud_Cover: cloud, Pressure: pressure };
 		}).filter(d => !isNaN(d.lat) && !isNaN(d.lon) && d.lat >= -90 && d.lat <= 90 && d.lon >= -180 && d.lon <= 180 && d.year);
 
 		// populate grouped condition checkboxes
