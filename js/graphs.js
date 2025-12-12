@@ -275,10 +275,10 @@ let currentBottomAxis = 'years';
 						drawBar(weatherCounts);
 					}
 					break;
-				case 'scatter-matrix':
-					// Hide #barSvg and draw scatter matrix SVG
-					drawScatterMatrix(filtered);
-					break;
+				   case 'scatter-matrix':
+					   // Hide #barSvg and draw scatter matrix SVG
+					   drawScatterMatrix(filtered, all); // pass both filtered and full data
+					   break;
 				default:
 					drawLine(yearData, startYear, endYear);
 			}
@@ -306,7 +306,6 @@ let currentBottomAxis = 'years';
 				   const n = parseFloat(s);
 				   return isNaN(n) ? null : n;
 			   }
-			   // Try to detect column names (for robustness)
 			   function detectCols(cols) {
 				   const lower = cols.map(c => c.toLowerCase());
 				   function find(pred) { const i = lower.findIndex(pred); return i === -1 ? null : cols[i]; }
@@ -319,10 +318,41 @@ let currentBottomAxis = 'years';
 					   pressure: find(c => c.includes('press')) || find(c => c.includes('pressure')),
 				   };
 			   }
-			   // Get columns from data
-			   const cols = data.length > 0 ? Object.keys(data[0]) : [];
+			   // Get columns from full data
+			   const fullData = arguments.length > 1 ? arguments[1] : data;
+			   const cols = fullData.length > 0 ? Object.keys(fullData[0]) : [];
 			   const keys = detectCols(cols);
-			   // Parse and prepare data for SPLOM
+			   // Compute fixed extents from full data
+			   const fixedExtents = {};
+			   VARS.forEach(v => {
+				   const arr = fullData.map(d => {
+					   if (v.key === 'Temp_Avg') {
+						   let tmax = keys.tempMax ? parseNum(d[keys.tempMax]) : null;
+						   let tmin = keys.tempMin ? parseNum(d[keys.tempMin]) : null;
+						   let tempAvg = null;
+						   if (tmax != null && tmin != null) tempAvg = (tmax + tmin) / 2;
+						   else if (tmax != null) tempAvg = tmax;
+						   else if (tmin != null) tempAvg = tmin;
+						   if (tempAvg == null) {
+							   const tempCol = Object.keys(d).find(k => k.toLowerCase().includes('temp'));
+							   if (tempCol) {
+								   const v = parseNum(d[tempCol]);
+								   if (v != null) tempAvg = v;
+							   }
+						   }
+						   return tempAvg;
+					   }
+					   if (v.key === 'Precipitation') return keys.precip ? parseNum(d[keys.precip]) : null;
+					   if (v.key === 'Wind_Max') return keys.wind ? parseNum(d[keys.wind]) : null;
+					   if (v.key === 'Cloud_Cover') return keys.cloud ? parseNum(d[keys.cloud]) : null;
+					   if (v.key === 'Pressure') return keys.pressure ? parseNum(d[keys.pressure]) : null;
+					   return null;
+				   }).filter(x => x != null && !isNaN(x));
+				   let extent = d3.extent(arr.length ? arr : [0, 1]);
+				   if (extent[0] === extent[1]) { extent[0] = extent[0] - 1; extent[1] = extent[1] + 1; }
+				   fixedExtents[v.key] = extent;
+			   });
+			   // Parse and prepare data for SPLOM (filtered)
 			   let parsed = data.map(d => {
 				   let tmax = keys.tempMax ? parseNum(d[keys.tempMax]) : null;
 				   let tmin = keys.tempMin ? parseNum(d[keys.tempMin]) : null;
@@ -330,9 +360,7 @@ let currentBottomAxis = 'years';
 				   if (tmax != null && tmin != null) tempAvg = (tmax + tmin) / 2;
 				   else if (tmax != null) tempAvg = tmax;
 				   else if (tmin != null) tempAvg = tmin;
-				   // Fallback: if both are null, try to find any temp column
 				   if (tempAvg == null) {
-					   // Try to find any column with 'temp' in the name
 					   const tempCol = Object.keys(d).find(k => k.toLowerCase().includes('temp'));
 					   if (tempCol) {
 						   const v = parseNum(d[tempCol]);
@@ -345,7 +373,6 @@ let currentBottomAxis = 'years';
 				   const pressure = keys.pressure ? parseNum(d[keys.pressure]) : null;
 				   return Object.assign({}, d, { Temp_Avg: tempAvg, Precipitation: precip, Wind_Max: wind, Cloud_Cover: cloud, Pressure: pressure });
 			   });
-			   // Remove rows with all nulls
 			   parsed = parsed.filter(d => VARS.some(v => d[v.key] != null && !isNaN(d[v.key])));
 			   const pad = 16;
 			   const n = VARS.length;
@@ -375,18 +402,15 @@ let currentBottomAxis = 'years';
 				   .style('right', 0)
 				   .style('bottom', controlsHeight + 'px');
 			   const root = svg.append('g').attr('transform', `translate(${pad},${pad})`);
-			   // Scales
-			   const scales = {};
-			   VARS.forEach(v => {
-				   const arr = parsed.map(d => d[v.key]).filter(x => x != null && !isNaN(x));
-				   const extent = d3.extent(arr.length ? arr : [0, 1]);
-				   if (extent[0] === extent[1]) { extent[0] = extent[0] - 1; extent[1] = extent[1] + 1; }
-				   // Use vertical range for y, horizontal for x
-				   scales[v.key] = {
-					   x: d3.scaleLinear().domain(extent).nice().range([pad, cellWidth - pad]),
-					   y: d3.scaleLinear().domain(extent).nice().range([cellHeight - pad, pad])
-				   };
-			   });
+			  // Scales (use fixed extents from full data)
+			  const scales = {};
+			  VARS.forEach(v => {
+				  const extent = fixedExtents[v.key];
+				  scales[v.key] = {
+					  x: d3.scaleLinear().domain(extent).nice().range([pad, cellWidth - pad]),
+					  y: d3.scaleLinear().domain(extent).nice().range([cellHeight - pad, pad])
+				  };
+			  });
 			   for (let i = 0; i < n; i++) {
 				   for (let j = 0; j < n; j++) {
 					   const cell = root.append('g').attr('transform', `translate(${j * (cellWidth + cellGap)},${i * cellHeight})`);

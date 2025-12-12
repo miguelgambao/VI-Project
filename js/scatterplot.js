@@ -59,6 +59,27 @@
         catch (err) { container.append('div').text('Failed to load /data/crashesFinal.csv — serve files via a local server.'); console.error(err); return; }
         if (!data || data.length === 0) { container.append('div').text('No rows in CSV'); return; }
 
+        // Compute fixed extents for each variable from the full dataset
+        const fixedExtents = {};
+        VARS.forEach(v => {
+            const arr = data.map(d => {
+                // Use the same parse logic as in parsed
+                if (v.key === 'Temp_Avg') {
+                    const tmax = d['Temp_Max'] !== undefined ? parseNum(d['Temp_Max']) : null;
+                    const tmin = d['Temp_Min'] !== undefined ? parseNum(d['Temp_Min']) : null;
+                    return tmax != null && tmin != null ? (tmax + tmin) / 2 : (tmax != null ? tmax : tmin);
+                }
+                if (v.key === 'Precipitation') return parseNum(d['Precipitation']);
+                if (v.key === 'Wind_Max') return parseNum(d['Wind_Max']);
+                if (v.key === 'Cloud_Cover') return parseNum(d['Cloud_Cover']);
+                if (v.key === 'Pressure') return parseNum(d['Pressure']);
+                return null;
+            }).filter(x => x != null && !isNaN(x));
+            let extent = d3.extent(arr.length ? arr : [0, 1]);
+            if (extent[0] === extent[1]) { extent[0] = extent[0] - 1; extent[1] = extent[1] + 1; }
+            fixedExtents[v.key] = extent;
+        });
+
         const cols = Object.keys(data[0]);
         const keys = detectCols(cols);
 
@@ -78,7 +99,8 @@
         // Apply sampling if configured (for faster rendering)
         if (SAMPLE_RATE < 1.0) {
             parsed = parsed.filter(() => Math.random() < SAMPLE_RATE);
-        } const categories = Array.from(new Set(parsed.map(d => d._cat))).sort();
+        }
+        const categories = Array.from(new Set(parsed.map(d => d._cat))).sort();
 
         // Use the requested categorical color mapping (explicit mapping)
         const colorMap = {
@@ -153,12 +175,11 @@
         const scales = {};
         const scalesInfo = {};
         vars.forEach(v => {
-            const arr = parsed.map(d => d[v.key]).filter(x => x != null && !isNaN(x));
-            const extent = d3.extent(arr.length ? arr : [0, 1]);
-            if (extent[0] === extent[1]) { extent[0] = extent[0] - 1; extent[1] = extent[1] + 1; }
-
+            const extent = fixedExtents[v.key];
             // Only apply symlog to Precipitation; leave other variables linear.
             if (v.key === 'Precipitation') {
+                // For symlog, use the same logic as before but with full-data extent
+                const arr = data.map(d => parseNum(d['Precipitation'])).filter(x => x != null && !isNaN(x));
                 const posVals = arr.filter(x => x > 0);
                 const minPos = posVals.length ? d3.min(posVals) : null;
                 const maxVal = extent[1];
