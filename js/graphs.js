@@ -659,25 +659,51 @@ let currentBottomAxis = 'years';
 	// Bottom axis controls: enable weather only for Bar (Ordered)
 	const bottomAxisWrap = document.getElementById('bottomAxisControls');
 	const weatherBtn = bottomAxisWrap ? bottomAxisWrap.querySelector('.bottomAxisBtn[data-type="weather"]') : null;
+	const yearsBtn = bottomAxisWrap ? bottomAxisWrap.querySelector('.bottomAxisBtn[data-type="years"]') : null;
 	const chartTypeWrap = document.getElementById('chartTypeControls');
+	const axisTypeWrap = document.getElementById('axisTypeControls');
+	const crashesBtn = axisTypeWrap ? axisTypeWrap.querySelector('.axisTypeBtn[data-type="crashes"]') : null;
+	const fatalitiesBtn = axisTypeWrap ? axisTypeWrap.querySelector('.axisTypeBtn[data-type="fatalities"]') : null;
+
+	function setButtonDisabled(btn, disabled) {
+		if (!btn) return;
+		if (disabled) {
+			btn.classList.add('disabled');
+			btn.disabled = true;
+		} else {
+			btn.classList.remove('disabled');
+			btn.disabled = false;
+		}
+	}
+
+	function updateButtonStates(chartType) {
+		if (chartType === 'scatter-matrix') {
+			setButtonDisabled(weatherBtn, true);
+			setButtonDisabled(yearsBtn, true);
+			setButtonDisabled(crashesBtn, true);
+			setButtonDisabled(fatalitiesBtn, true);
+		} else if (chartType === 'bar') {
+			setButtonDisabled(weatherBtn, false);
+			setButtonDisabled(yearsBtn, false);
+			setButtonDisabled(crashesBtn, false);
+			setButtonDisabled(fatalitiesBtn, false);
+		} else {
+			setButtonDisabled(weatherBtn, true);
+			setButtonDisabled(yearsBtn, false);
+			setButtonDisabled(crashesBtn, false);
+			setButtonDisabled(fatalitiesBtn, false);
+		}
+		// If weatherBtn is disabled and active, switch to years
+		if (weatherBtn && weatherBtn.classList.contains('active') && weatherBtn.disabled) {
+			if (yearsBtn) yearsBtn.click();
+		}
+	}
+
 	if (chartTypeWrap && weatherBtn) {
 		chartTypeWrap.querySelectorAll('.chartTypeBtn').forEach(btn => {
 			btn.addEventListener('click', () => {
 				const t = btn.dataset.type;
-				if (t === 'bar') {
-					weatherBtn.classList.remove('disabled');
-					weatherBtn.disabled = false;
-				} else {
-					weatherBtn.classList.add('disabled');
-					weatherBtn.disabled = true;
-					// If currently selected, switch to years
-					if (weatherBtn.classList.contains('active')) {
-						const yearsBtn = bottomAxisWrap.querySelector('.bottomAxisBtn[data-type="years"]');
-						if (yearsBtn) {
-							yearsBtn.click();
-						}
-					}
-				}
+				updateButtonStates(t);
 			});
 		});
 	}
@@ -701,17 +727,7 @@ let currentBottomAxis = 'years';
 			if (activeChartBtn && activeChartBtn.dataset.type) {
 				currentChart = activeChartBtn.dataset.type;
 			}
-			// Also update weather button state
-			if (chartTypeWrap && weatherBtn) {
-				const t = currentChart;
-				if (t === 'bar') {
-					weatherBtn.classList.remove('disabled');
-					weatherBtn.disabled = false;
-				} else {
-					weatherBtn.classList.add('disabled');
-					weatherBtn.disabled = true;
-				}
-			}
+			updateButtonStates(currentChart);
 		}, 0);
 		["startYear", "endYear", "startAboard", "endAboard", "startFatal", "endFatal"].forEach(id => {
 			const el = document.getElementById(id);

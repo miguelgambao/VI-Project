@@ -1,3 +1,11 @@
+.axisTypeBtn.disabled {
+	background: #444 !important;
+	color: #aaa !important;
+	border-color: #444 !important;
+	cursor: not-allowed !important;
+	opacity: 0.7;
+	pointer-events: none;
+}
 .bottomAxisBtn.disabled {
 	background: #444 !important;
 	color: #aaa !important;
