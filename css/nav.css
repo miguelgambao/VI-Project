@@ -26,3 +26,12 @@
   color: #fff;
   transition: 0.2s;
 }
+
+.topNav .navBtn.active {
+  background: rgba(218, 34, 34, 0.95);
+  border: 2px solid rgba(218, 34, 34, 0.95);
+  color: #fff;
+  font-weight: bold;
+  pointer-events: none;
+  transition: 0.2s;
+}
