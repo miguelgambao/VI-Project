@@ -90,6 +90,8 @@
 	left: 18px;
 	z-index: 10;
 	align-items: center;
+	width: calc(100% - 36px);
+	justify-content: space-between;
 }
 
 .axisTypeControls, .chartTypeControls {
@@ -147,6 +149,7 @@
 	border-radius: 8px;
 	box-shadow: 0 2px 8px rgba(0,0,0,0.12);
 	padding: 6px 12px;
+	justify-content: flex-end;
 }
 .chartTypeBtn {
 	/* Match route toggle visuals: transparent base, bold text, rounded pill, white border */
