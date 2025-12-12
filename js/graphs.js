@@ -181,17 +181,33 @@ let currentBottomAxis = 'years';
 		try {
 			const barWrap = document.getElementById('barWrap');
 			const barSvgEl = document.getElementById('barSvg');
-			// Remove only the scatter matrix SVG (not #barSvg)
+			// Remove all SVGs except #barSvg (never remove #barSvg)
 			if (barWrap) {
 				barWrap.querySelectorAll('svg').forEach(svg => {
 					if (svg.id !== 'barSvg') svg.remove();
 				});
 			}
-			// By default, show #barSvg
-			if (barSvgEl) barSvgEl.style.display = '';
-			// Re-select barSvg in case it was hidden and D3 selection is stale
-			if (barSvgEl) {
-				barSvg = d3.select(barSvgEl);
+			// If switching to line/bar and #barSvg is missing, recreate it
+			let barSvgElCurrent = document.getElementById('barSvg');
+			if (!barSvgElCurrent && currentChart !== 'scatter-matrix') {
+				// Recreate #barSvg if missing
+				const newSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+				newSvg.setAttribute('id', 'barSvg');
+				const barWrapDiv = document.getElementById('barWrap');
+				if (barWrapDiv) {
+					barWrapDiv.insertBefore(newSvg, barWrapDiv.firstChild);
+				}
+				barSvgElCurrent = newSvg;
+			}
+			// Show or hide #barSvg depending on chart type
+			if (barSvgElCurrent) {
+				if (currentChart === 'scatter-matrix') {
+					barSvgElCurrent.style.display = 'none';
+				} else {
+					barSvgElCurrent.style.display = 'block';
+				}
+				// Re-select barSvg in case it was hidden and D3 selection is stale
+				barSvg = d3.select(barSvgElCurrent);
 			}
 			const filtered = filterData(all);
 			console.log('renderCharts - filtered length:', filtered.length);
@@ -260,10 +276,9 @@ let currentBottomAxis = 'years';
 					}
 					break;
 				case 'scatter-matrix':
-					   // Hide #barSvg and draw scatter matrix SVG
-					   if (barSvgEl) barSvgEl.style.display = 'none';
-					   drawScatterMatrix(filtered);
-					   break;
+					// Hide #barSvg and draw scatter matrix SVG
+					drawScatterMatrix(filtered);
+					break;
 				default:
 					drawLine(yearData, startYear, endYear);
 			}
@@ -272,9 +287,10 @@ let currentBottomAxis = 'years';
 		function drawScatterMatrix(data) {
 			const container = document.getElementById('barWrap');
 			if (!container) return;
-			// Only remove any existing SVG, not the controls
-			const oldSvg = container.querySelector('svg');
-			if (oldSvg) oldSvg.remove();
+			// Only remove any existing SVGs that are not #barSvg
+			container.querySelectorAll('svg').forEach(svg => {
+				if (svg.id !== 'barSvg') svg.remove();
+			});
 			const VARS = [
 				{ key: 'Temp_Avg', label: 'Temp Avg (°C)' },
 				{ key: 'Precipitation', label: 'Precip (mm)' },
