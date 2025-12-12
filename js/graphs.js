@@ -324,9 +324,21 @@ let currentBottomAxis = 'years';
 			   const keys = detectCols(cols);
 			   // Parse and prepare data for SPLOM
 			   let parsed = data.map(d => {
-				   const tmax = keys.tempMax ? parseNum(d[keys.tempMax]) : null;
-				   const tmin = keys.tempMin ? parseNum(d[keys.tempMin]) : null;
-				   const tempAvg = tmax != null && tmin != null ? (tmax + tmin) / 2 : (tmax != null ? tmax : tmin);
+				   let tmax = keys.tempMax ? parseNum(d[keys.tempMax]) : null;
+				   let tmin = keys.tempMin ? parseNum(d[keys.tempMin]) : null;
+				   let tempAvg = null;
+				   if (tmax != null && tmin != null) tempAvg = (tmax + tmin) / 2;
+				   else if (tmax != null) tempAvg = tmax;
+				   else if (tmin != null) tempAvg = tmin;
+				   // Fallback: if both are null, try to find any temp column
+				   if (tempAvg == null) {
+					   // Try to find any column with 'temp' in the name
+					   const tempCol = Object.keys(d).find(k => k.toLowerCase().includes('temp'));
+					   if (tempCol) {
+						   const v = parseNum(d[tempCol]);
+						   if (v != null) tempAvg = v;
+					   }
+				   }
 				   const precip = keys.precip ? parseNum(d[keys.precip]) : null;
 				   const wind = keys.wind ? parseNum(d[keys.wind]) : null;
 				   const cloud = keys.cloud ? parseNum(d[keys.cloud]) : null;
