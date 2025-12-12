@@ -413,6 +413,7 @@ let currentBottomAxis = 'years';
 			  });
 			   for (let i = 0; i < n; i++) {
 				   for (let j = 0; j < n; j++) {
+					   if (i > j) continue; // Only draw upper triangle and diagonal
 					   const cell = root.append('g').attr('transform', `translate(${j * (cellWidth + cellGap)},${i * cellHeight})`);
 					   cell.append('rect').attr('class', 'cell').attr('width', cellWidth).attr('height', cellHeight).attr('fill', 'none');
 					   const xi = VARS[j];
