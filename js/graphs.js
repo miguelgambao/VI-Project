@@ -337,6 +337,7 @@ let currentBottomAxis = 'years';
 			   parsed = parsed.filter(d => VARS.some(v => d[v.key] != null && !isNaN(d[v.key])));
 			   const pad = 16;
 			   const n = VARS.length;
+			   const cellGap = 16; // horizontal gap between cells
 			   // Use the chartBox's size, minus the controls row height
 			   const chartBox = container;
 			   const controlsRow = chartBox.querySelector('.chartControlsRow');
@@ -348,9 +349,9 @@ let currentBottomAxis = 'years';
 			   }
 			   const w = boxRect.width || 600;
 			   const h = (boxRect.height - controlsHeight) || 600;
-			   const cellWidth = (w - pad * 2) / n;
+			   const cellWidth = ((w - pad * 2) - cellGap * (n - 1)) / n;
 			   const cellHeight = (h - pad * 2) / n;
-			   const totalW = cellWidth * n + pad * 2;
+			   const totalW = cellWidth * n + cellGap * (n - 1) + pad * 2;
 			   const totalH = cellHeight * n + pad * 2;
 			   const svg = d3.select(container).append('svg')
 				   .attr('width', totalW)
@@ -376,7 +377,7 @@ let currentBottomAxis = 'years';
 			   });
 			   for (let i = 0; i < n; i++) {
 				   for (let j = 0; j < n; j++) {
-					   const cell = root.append('g').attr('transform', `translate(${j * cellWidth},${i * cellHeight})`);
+					   const cell = root.append('g').attr('transform', `translate(${j * (cellWidth + cellGap)},${i * cellHeight})`);
 					   cell.append('rect').attr('class', 'cell').attr('width', cellWidth).attr('height', cellHeight).attr('fill', 'none');
 					   const xi = VARS[j];
 					   const yi = VARS[i];
