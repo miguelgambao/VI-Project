@@ -679,7 +679,7 @@ let currentBottomAxis = 'years';
 				.attr('y', d => y(d.value))
 				.attr('width', x.bandwidth())
 				.attr('height', d => innerH - y(d.value))
-				.attr('fill', '#e85555')
+				.attr('fill', '#e14242ff')
 				.on('mouseenter', (event, d) => {
 					const tt = d3.select('body').append('div').attr('class', 'tooltip').style('display', 'block');
 					tt.html(`<div><strong>${d.year}</strong></div><div>${d.value} ${currentAxis === 'crashes' ? 'crashes' : 'fatalities'}</div>`)

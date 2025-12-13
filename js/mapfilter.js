@@ -853,4 +853,7 @@ function drawDots() {
                 }),
         (exit) => exit.remove()
     );
+
+    // Ensure dots are always on top of routes
+    g.selectAll("circle.dot").raise();
 }

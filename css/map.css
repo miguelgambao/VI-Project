@@ -53,7 +53,7 @@ svg {
   color: #fff;
 }
 .dot {
-  fill: red;
+  fill: rgb(218, 34, 34);
 }
 .dot:hover{
   cursor: pointer;
@@ -282,7 +282,7 @@ svg {
 /* route lines from crash to origin/start point */
 path.route {
   fill: none;
-  stroke: rgba(255, 60, 60, 0.95);
+  stroke: rgb(209, 24, 24);
   stroke-width: 0.6px;
   stroke-linecap: round;
   stroke-linejoin: round;
