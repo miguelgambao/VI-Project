@@ -797,7 +797,7 @@ function drawDots() {
                 })
                 .attr("cx", (d) => projection([d.lon, d.lat])[0])
                 .attr("cy", (d) => projection([d.lon, d.lat])[1])
-                .on("mouseover", (event, d) => {
+                .on("mouseover", async (event, d) => {
                     const nf = new Intl.NumberFormat();
                     const aboard =
                         d.aboard != null && !isNaN(d.aboard) ? nf.format(d.aboard) : "n/a";
@@ -812,25 +812,103 @@ function drawDots() {
                             ? `${d.lat.toFixed(3)}, ${d.lon.toFixed(3)}`
                             : "n/a";
 
-                    const html = `
-                    <div><span class="k">Date:</span> ${d.dateStr ?? "n/a"} ${d.timeStr ?? ""
-                        }</div>
-                    <div><span class="k">Location:</span> ${d.locationStr || "n/a"
-                        }</div>
-                    <div><span class="k">Operator:</span> ${d.operatorStr || "n/a"
-                        }</div>
-                    <div><span class="k">Route:</span> ${d.routeStr || "n/a"
-                        }</div>
-                    <div><span class="k">Type:</span> ${d.typeStr || "n/a"
-                        }</div>
-                    <div><span class="k">Fatalities:</span> ${fatal} (${fatalPct})</div>
-                    <div><span class="k">Summary:</span> ${d.summaryStr || "n/a"
-                        }</div>
-                `;
+                    // Show loading while fetching image
+                    let html = `
+                        <div id="plane-image"><em>Loading image...</em></div>
+                        <div><span class="k">Date:</span> ${d.dateStr ?? "n/a"} ${d.timeStr ?? ""}</div>
+                        <div><span class="k">Location:</span> ${d.locationStr || "n/a"}</div>
+                        <div><span class="k">Operator:</span> ${d.operatorStr || "n/a"}</div>
+                        <div><span class="k">Route:</span> ${d.routeStr || "n/a"}</div>
+                        <div><span class="k">Type:</span> ${d.typeStr || "n/a"}</div>
+                        <div><span class="k">Fatalities:</span> ${fatal} (${fatalPct})</div>
+                        <div><span class="k">Summary:</span> ${d.summaryStr || "n/a"}</div>
+                    `;
                     tooltip.style("display", "block").html(html);
                     tooltip
                         .style("left", event.pageX + 12 + "px")
                         .style("top", event.pageY + 12 + "px");
+
+                    // Broadened search for Wikimedia image
+                    let model = d.typeStr ? d.typeStr.trim() : "";
+                    let searchTerms = [];
+                    if (model) {
+                        searchTerms.push(model);
+                        // Remove after dash (e.g., "Boeing 737-800" -> "Boeing 737")
+                        let dashIdx = model.indexOf("-");
+                        if (dashIdx > 0) {
+                            searchTerms.push(model.substring(0, dashIdx).trim());
+                        }
+                        // Remove after parenthesis (e.g., "Douglas DC-3 (C-47)" -> "Douglas DC-3")
+                        let parenIdx = model.indexOf("(");
+                        if (parenIdx > 0) {
+                            searchTerms.push(model.substring(0, parenIdx).trim());
+                        }
+                        // Use first two and three words
+                        let words = model.split(/\s+/);
+                        if (words.length >= 2) {
+                            searchTerms.push(words[0] + " " + words[1]);
+                        }
+                        if (words.length >= 3) {
+                            searchTerms.push(words[0] + " " + words[1] + " " + words[2]);
+                        }
+                        // Use only manufacturer (first word)
+                        searchTerms.push(words[0]);
+                        // Add with 'aircraft', 'plane', 'jet' suffixes
+                        if (searchTerms.length > 0) {
+                            let extra = [];
+                            for (let t of searchTerms) {
+                                extra.push(t + " aircraft");
+                                extra.push(t + " plane");
+                                extra.push(t + " jet");
+                            }
+                            searchTerms = searchTerms.concat(extra);
+                        }
+                    }
+
+                    let imageUrl = null;
+                    let foundImage = false;
+                    let imageTitle = null;
+                    for (let term of searchTerms) {
+                        try {
+                            // Wikimedia search API for images
+                            const searchApi = `https://en.wikipedia.org/w/api.php?action=query&format=json&list=search&srsearch=${encodeURIComponent(term)}&origin=*`;
+                            const searchResp = await fetch(searchApi);
+                            const searchData = await searchResp.json();
+                            if (searchData.query && searchData.query.search && searchData.query.search.length > 0) {
+                                // Try up to 3 results to find a relevant plane page
+                                for (let i = 0; i < Math.min(3, searchData.query.search.length); i++) {
+                                    let page = searchData.query.search[i];
+                                    let pageTitle = page.title;
+                                    let snippet = page.snippet ? page.snippet.toLowerCase() : "";
+                                    let titleLower = pageTitle.toLowerCase();
+                                    // Only accept if title or snippet contains plane keywords
+                                    if (titleLower.includes('aircraft') || titleLower.includes('plane') || titleLower.includes('jet') || titleLower.includes('airliner') || snippet.includes('aircraft') || snippet.includes('plane') || snippet.includes('jet') || snippet.includes('airliner')) {
+                                        // Now get the image for this page
+                                        const imgApi = `https://en.wikipedia.org/w/api.php?action=query&format=json&prop=pageimages&titles=${encodeURIComponent(pageTitle)}&piprop=original&origin=*`;
+                                        const imgResp = await fetch(imgApi);
+                                        const imgData = await imgResp.json();
+                                        if (imgData.query && imgData.query.pages) {
+                                            const pages = Object.values(imgData.query.pages);
+                                            if (pages.length > 0 && pages[0].original && pages[0].original.source) {
+                                                imageUrl = pages[0].original.source;
+                                                imageTitle = pageTitle;
+                                                foundImage = true;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                                if (foundImage) break;
+                            }
+                        } catch (e) {
+                            // ignore errors, fallback below
+                        }
+                    }
+                    let imageHtml = foundImage
+                        ? `<img src="${imageUrl}" alt="${imageTitle || model}" style="width:100%;height:auto;display:block;margin:0;padding:0;">`
+                        : '<div style="color:#888;font-size:13px;margin-bottom:6px;">No image found</div>';
+                    // Update tooltip with image
+                    tooltip.select("#plane-image").html(imageHtml);
                 })
                 .on("mousemove", (event) => {
                     tooltip
