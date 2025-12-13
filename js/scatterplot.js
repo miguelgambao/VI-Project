@@ -59,6 +59,27 @@
         catch (err) { container.append('div').text('Failed to load /data/crashesFinal.csv — serve files via a local server.'); console.error(err); return; }
         if (!data || data.length === 0) { container.append('div').text('No rows in CSV'); return; }
 
+        // Compute fixed extents for each variable from the full dataset
+        const fixedExtents = {};
+        VARS.forEach(v => {
+            const arr = data.map(d => {
+                // Use the same parse logic as in parsed
+                if (v.key === 'Temp_Avg') {
+                    const tmax = d['Temp_Max'] !== undefined ? parseNum(d['Temp_Max']) : null;
+                    const tmin = d['Temp_Min'] !== undefined ? parseNum(d['Temp_Min']) : null;
+                    return tmax != null && tmin != null ? (tmax + tmin) / 2 : (tmax != null ? tmax : tmin);
+                }
+                if (v.key === 'Precipitation') return parseNum(d['Precipitation']);
+                if (v.key === 'Wind_Max') return parseNum(d['Wind_Max']);
+                if (v.key === 'Cloud_Cover') return parseNum(d['Cloud_Cover']);
+                if (v.key === 'Pressure') return parseNum(d['Pressure']);
+                return null;
+            }).filter(x => x != null && !isNaN(x));
+            let extent = d3.extent(arr.length ? arr : [0, 1]);
+            if (extent[0] === extent[1]) { extent[0] = extent[0] - 1; extent[1] = extent[1] + 1; }
+            fixedExtents[v.key] = extent;
+        });
+
         const cols = Object.keys(data[0]);
         const keys = detectCols(cols);
 
@@ -78,7 +99,8 @@
         // Apply sampling if configured (for faster rendering)
         if (SAMPLE_RATE < 1.0) {
             parsed = parsed.filter(() => Math.random() < SAMPLE_RATE);
-        } const categories = Array.from(new Set(parsed.map(d => d._cat))).sort();
+        }
+        const categories = Array.from(new Set(parsed.map(d => d._cat))).sort();
 
         // Use the requested categorical color mapping (explicit mapping)
         const colorMap = {
@@ -153,12 +175,11 @@
         const scales = {};
         const scalesInfo = {};
         vars.forEach(v => {
-            const arr = parsed.map(d => d[v.key]).filter(x => x != null && !isNaN(x));
-            const extent = d3.extent(arr.length ? arr : [0, 1]);
-            if (extent[0] === extent[1]) { extent[0] = extent[0] - 1; extent[1] = extent[1] + 1; }
-
+            const extent = fixedExtents[v.key];
             // Only apply symlog to Precipitation; leave other variables linear.
             if (v.key === 'Precipitation') {
+                // For symlog, use the same logic as before but with full-data extent
+                const arr = data.map(d => parseNum(d['Precipitation'])).filter(x => x != null && !isNaN(x));
                 const posVals = arr.filter(x => x > 0);
                 const minPos = posVals.length ? d3.min(posVals) : null;
                 const maxVal = extent[1];
@@ -176,8 +197,45 @@
             }
         });
 
+        // Helper to compute Pearson correlation
+        function pearsonCorr(arr1, arr2) {
+            const n = arr1.length;
+            if (n === 0) return NaN;
+            const mean1 = d3.mean(arr1);
+            const mean2 = d3.mean(arr2);
+            let num = 0, den1 = 0, den2 = 0;
+            for (let k = 0; k < n; k++) {
+                const dx = arr1[k] - mean1;
+                const dy = arr2[k] - mean2;
+                num += dx * dy;
+                den1 += dx * dx;
+                den2 += dy * dy;
+            }
+            return (den1 && den2) ? num / Math.sqrt(den1 * den2) : NaN;
+        }
         for (let i = 0; i < n; i++) {
             for (let j = 0; j < n; j++) {
+                if (i > j) {
+                    // Lower triangle: show correlation
+                    const xi = vars[j];
+                    const yi = vars[i];
+                    const points = parsed.filter(d => d[xi.key] != null && !isNaN(d[xi.key]) && d[yi.key] != null && !isNaN(d[yi.key]));
+                    const xVals = points.map(d => d[xi.key]);
+                    const yVals = points.map(d => d[yi.key]);
+                    const corr = pearsonCorr(xVals, yVals);
+                    root.append('g')
+                        .attr('transform', `translate(${j * finalCellSize},${i * finalCellSize})`)
+                        .append('text')
+                        .attr('x', finalCellSize / 2)
+                        .attr('y', finalCellSize / 2)
+                        .attr('text-anchor', 'middle')
+                        .attr('dominant-baseline', 'middle')
+                        .attr('fill', '#e85555')
+                        .attr('font-size', Math.max(14, finalCellSize * 0.18))
+                        .attr('font-weight', 700)
+                        .text(isNaN(corr) ? '' : corr.toFixed(2));
+                    continue;
+                }
                 const cell = root.append('g').attr('transform', `translate(${j * finalCellSize},${i * finalCellSize})`);
                 cell.append('rect').attr('class', 'cell').attr('width', finalCellSize).attr('height', finalCellSize).attr('fill', '#0b0b0b');
 
@@ -218,7 +276,7 @@
                     .attr('cx', d => xa(d[xi.key]))
                     .attr('cy', d => ya(d[yi.key]))
                     .attr('r', POINT_SIZE)
-                    .attr('fill', d => color(d._cat))
+                    .attr('fill', '#da2222f2')
                     .attr('opacity', 0.3);
 
                 let xAxis = d3.axisBottom(xa).ticks(3).tickSize(2);
@@ -247,13 +305,7 @@
             }
         }
 
-        // Create an HTML legend to the right of the SVG so labels don't overlap the plot.
-        const legendDiv = container.append('div').attr('class', 'splom-legend');
-        categories.forEach((c) => {
-            const item = legendDiv.append('div').attr('class', 'legend-item');
-            item.append('div').attr('class', 'legend-swatch').style('background', color(c));
-            item.append('div').attr('class', 'legend-label').text(c);
-        });
+        // Legend removed: all dots are now red, so no legend is needed.
     }
 
     btnRedraw && btnRedraw.addEventListener('click', draw);

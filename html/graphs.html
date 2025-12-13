@@ -13,10 +13,9 @@
       <div id="mapWrap" class="mapWrap">
         <!-- top-left nav (same as map page) -->
         <nav class="topNav" aria-label="Primary">
-          <a class="navBtn" href="../index.html">Map</a>
-          <a class="navBtn" href="scatterplot.html">Scatter Matrix</a>
-          <a class="navBtn" href="graphs.html">Graphs</a>
-          <a class="navBtn" href="about.html">About</a>
+             <a class="navBtn" href="../index.html">Map</a>
+             <a class="navBtn active" href="graphs.html">Graphs</a>
+             <a class="navBtn" href="about.html">About</a>
         </nav>
 
         <!-- Single chart area (replaces the map) -->
@@ -29,15 +28,16 @@
                 <button class="axisTypeBtn active" data-type="crashes">Crashes</button>
                 <button class="axisTypeBtn" data-type="fatalities">Fatalities</button>
               </div>
+              <div id="bottomAxisControls" class="bottomAxisControls">
+                <div class="bottomAxisLabel">Bottom axis:</div>
+                <button class="bottomAxisBtn active" data-type="years">Years</button>
+                <button class="bottomAxisBtn disabled" data-type="weather">Weather Conditions</button>
+              </div>
               <div id="chartTypeControls" class="chartTypeControls">
                 <div class="chartTypeLabel">Graph type:</div>
                 <button class="chartTypeBtn active" data-type="line">Line</button>
                 <button class="chartTypeBtn" data-type="bar">Bar (Ordered)</button>
-              </div>
-              <div id="bottomAxisControls" class="bottomAxisControls">
-                <div class="bottomAxisLabel">Bottom axis:</div>
-                <button class="bottomAxisBtn active" data-type="years">Years</button>
-                <button class="bottomAxisBtn" data-type="weather">Weather Conditions</button>
+                <button class="chartTypeBtn" data-type="scatter-matrix">Scatter Matrix</button>
               </div>
             </div>
           </div>

@@ -49,11 +49,11 @@ svg {
 .routeToggle:hover {
   transition: 0.2s;
   background: rgba(218, 34, 34, 0.95);
-  border: 2px solid rgba(218, 34, 34, 0.95);
+  border: 2px solid #da2222f2;
   color: #fff;
 }
 .dot {
-  fill: red;
+  fill: rgb(218, 34, 34);
 }
 .dot:hover{
   cursor: pointer;
@@ -68,7 +68,6 @@ svg {
   min-width: 220px;
   height: 100vh;
   padding: 16px;
-  border-radius: 30px 0px 0px 30px;
   box-sizing: border-box;
   background: #2c2c2c;
   display: flex;
@@ -125,7 +124,7 @@ svg {
   margin-top: 6px;
   padding-top: 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.04);
-  padding-bottom: 40px;
+  padding-bottom: 100px;
 }
 .conditionsContainer .conditionsList {
   display: flex;
@@ -283,7 +282,7 @@ svg {
 /* route lines from crash to origin/start point */
 path.route {
   fill: none;
-  stroke: rgba(255, 60, 60, 0.95);
+  stroke: rgb(209, 24, 24);
   stroke-width: 0.6px;
   stroke-linecap: round;
   stroke-linejoin: round;
