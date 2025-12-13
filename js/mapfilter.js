@@ -890,10 +890,27 @@ function drawDots() {
                                         if (imgData.query && imgData.query.pages) {
                                             const pages = Object.values(imgData.query.pages);
                                             if (pages.length > 0 && pages[0].original && pages[0].original.source) {
-                                                imageUrl = pages[0].original.source;
-                                                imageTitle = pageTitle;
-                                                foundImage = true;
-                                                break;
+                                                let imgSrc = pages[0].original.source;
+                                                let lowerSrc = imgSrc.toLowerCase();
+                                                let lowerTitle = pageTitle.toLowerCase();
+                                                // Exclude logos, emblems, insignias, flags, seals
+                                                if (
+                                                    !lowerSrc.includes('logo') &&
+                                                    !lowerSrc.includes('emblem') &&
+                                                    !lowerSrc.includes('insignia') &&
+                                                    !lowerSrc.includes('flag') &&
+                                                    !lowerSrc.includes('seal') &&
+                                                    !lowerTitle.includes('logo') &&
+                                                    !lowerTitle.includes('emblem') &&
+                                                    !lowerTitle.includes('insignia') &&
+                                                    !lowerTitle.includes('flag') &&
+                                                    !lowerTitle.includes('seal')
+                                                ) {
+                                                    imageUrl = imgSrc;
+                                                    imageTitle = pageTitle;
+                                                    foundImage = true;
+                                                    break;
+                                                }
                                             }
                                         }
                                     }
