@@ -33,6 +33,7 @@
     <!-- Centered hover navigation -->
     <nav class="main-nav">
       <a href="#home" class="active">Home</a>
+      <a href="#about">About</a>
       <a href="#map">Map</a>
       <a href="#graphs">Graphs</a>
     </nav>
@@ -93,23 +94,22 @@
     <main>
       <!-- HOME SECTION -->
       <section id="home">
-        <div class="about-content">
+        <div class="hero-section">
           <h1>AVIATION ARCHIVE</h1>
           <p class="subtitle">
             Visualizing 70 years of global flight incidents.
           </p>
-          <h2>PROJECT OVERVIEW</h2>
+          <footer>by António Simões & Miguel Gambão</footer>
+          <div class="scroll-hint">Hover top for nav</div>
+        </div>
+      </section>
+
+      <!-- ABOUT SECTION -->
+      <section id="about" class="content-section">
+        <div class="content-box">
+          <h2>Where is the sky most dangerous?</h2>
           <p>
-            Where is the sky most dangerous? We explore the data behind 4,000+
-            flight incidents from 1940 to 2009. From visualizing the global
-            spread of crash sites to tracking historical safety trends, this
-            dashboard connects the dots between location, time, and the weather
-            patterns that shape aviation disasters.
-          </p>
-          <footer>
-            Created by António Simões & Miguel Gambão • Information
-            Visualization 2025
-          </footer>
+            In this project we explore the data behind 4,000+ flight incidents from 1940 to 2009. From visualizing the global spread of crash sites to tracking historical safety trends, this dashboard connects the dots between location, time, and the weather patterns that shape aviation disasters.          </p>
         </div>
       </section>
 
@@ -183,5 +183,6 @@
     <script src="js/map-section.js"></script>
     <script src="js/graphs-section.js"></script>
     <script src="js/filter-dropdown.js"></script>
+    <script src="js/scroll-hint.js"></script>
   </body>
 </html>

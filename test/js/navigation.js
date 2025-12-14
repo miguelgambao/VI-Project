@@ -34,40 +34,22 @@
         });
     }
 
-    // Scroll direction tracking for nav visibility
-    let lastScrollTop = 0;
-    const nav = document.querySelector(".main-nav");
-    const scrollThreshold = 100; // Start hiding after scrolling 100px
-
-    function updateNavVisibility() {
-        const currentScrollTop = window.pageYOffset || document.documentElement.scrollTop;
-        
-        // Always show at the top of the page
-        if (currentScrollTop < scrollThreshold) {
-            nav.classList.remove("nav-hidden");
-        }
-        // Show when scrolling up
-        else if (currentScrollTop < lastScrollTop) {
-            nav.classList.remove("nav-hidden");
-        }
-        // Hide when scrolling down
-        else if (currentScrollTop > lastScrollTop) {
-            nav.classList.add("nav-hidden");
-        }
-        
-        lastScrollTop = currentScrollTop <= 0 ? 0 : currentScrollTop;
-    }
-
-    // Show filters only after passing the Home section
+    // Show filters only after passing Home and About sections
     function updateFiltersVisibility() {
-        const about = document.getElementById("home");
+        const home = document.getElementById("home");
+        const about = document.getElementById("about");
         const filters = document.getElementById("global-filters");
-        if (about && filters) {
-            const aboutBottom = about.offsetTop + about.offsetHeight;
-            if (window.pageYOffset + 100 >= aboutBottom) {
-                filters.classList.remove("hidden");
-            } else {
-                filters.classList.add("hidden");
+
+        if (filters) {
+            // Calculate the bottom of the about section (or home if about doesn't exist)
+            let lastIntroSection = about || home;
+            if (lastIntroSection) {
+                const introBottom = lastIntroSection.offsetTop + lastIntroSection.offsetHeight;
+                if (window.pageYOffset + 100 >= introBottom) {
+                    filters.classList.remove("hidden");
+                } else {
+                    filters.classList.add("hidden");
+                }
             }
         }
     }
@@ -75,11 +57,9 @@
     window.addEventListener("scroll", () => {
         updateActiveNav();
         updateFiltersVisibility();
-        updateNavVisibility();
     });
 
     // Initialize on load
     updateActiveNav();
     updateFiltersVisibility();
-    updateNavVisibility();
 })();

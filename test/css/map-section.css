@@ -6,7 +6,6 @@
   grid-template-columns: 1fr;
   grid-template-rows: 1fr;
   padding: 1.2vmin;
-  padding-top: 1.2vmin;
   padding-right: calc(22% + 2.4vmin);
   box-sizing: border-box;
   overflow: hidden;

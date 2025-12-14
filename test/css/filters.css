@@ -1,9 +1,9 @@
 /* Sticky filter sidebar (shared across all sections) */
 #global-filters {
   position: fixed;
-  right: 1.2%;
-  top: 1.2%;
-  bottom: 1.2%;
+  right: 1.2vmin;
+  top: 1.2vmin;
+  bottom: 1.2vmin;
   width: 22%;
   min-width: 16rem;
   max-width: 24rem;
