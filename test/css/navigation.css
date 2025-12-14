@@ -37,6 +37,7 @@
   border-radius: 999px;
   font-weight: 600;
   transition: all 0.2s;
+  font-family: "Roboto Mono", monospace;
 }
 
 .main-nav a:hover,

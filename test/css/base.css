@@ -5,8 +5,12 @@
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
-  font-family: "Roboto", sans-serif;
+  font-family: "Lora", serif;
   background: #0d0d0d;
   color: #fff;
   overflow-x: hidden;
