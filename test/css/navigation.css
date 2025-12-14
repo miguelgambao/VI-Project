@@ -24,9 +24,16 @@
   gap: 0.75rem;
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 999px;
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* Hide nav when scrolling down (not at top) */
+.main-nav.nav-hidden {
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s ease;
+  transform: translateX(-50%) translateY(-100%);
 }
 
 .main-nav a {
@@ -46,9 +53,10 @@
   border-color: rgba(218, 34, 34, 0.95);
 }
 
-/* Reveal rules: show nav when hovering zone or nav */
+/* Reveal rules: show nav when hovering zone or nav (overrides hidden state) */
 #nav-hover-zone:hover ~ .main-nav,
 .main-nav:hover {
   opacity: 1;
   pointer-events: auto;
+  transform: translateX(-50%) translateY(0) !important;
 }
