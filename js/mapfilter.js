@@ -922,7 +922,7 @@ function drawDots() {
                         }
                     }
                     let imageHtml = foundImage
-                        ? `<img src="${imageUrl}" alt="${imageTitle || model}" style="width:100%;height:auto;display:block;margin:0;padding:0;">`
+                        ? `<img src="${imageUrl}" alt="${imageTitle || model}" style="width:100%;height:auto;display:block;margin:0 0 8px 0;padding:0;">`
                         : '<div style="color:#888;font-size:13px;margin-bottom:6px;">No image found</div>';
                     // Update tooltip with image
                     tooltip.select("#plane-image").html(imageHtml);
