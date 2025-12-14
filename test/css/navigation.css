@@ -53,3 +53,38 @@
   pointer-events: auto;
   transform: translateX(-50%) translateY(0) !important;
 }
+
+/* MENU hint label at top center */
+.menu-hint {
+  position: fixed;
+  top: 0.75rem;
+  left: 50%;
+  transform: translate(-50%, 0.9rem);
+  z-index: 1050;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.4);
+  font-family: "Roboto Mono", monospace;
+  letter-spacing: 0.06em;
+  opacity: 0;
+  transition: opacity 0.8s ease 0.25s;
+}
+
+.menu-hint.visible {
+  opacity: 1;
+  animation: menuPulse 4s ease-in-out infinite;
+}
+
+.menu-hint.hidden {
+  opacity: 0;
+  animation: none;
+}
+
+@keyframes menuPulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}

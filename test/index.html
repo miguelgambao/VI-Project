@@ -37,6 +37,8 @@
       <a href="#map">Map</a>
       <a href="#graphs">Graphs</a>
     </nav>
+    <!-- Subtle MENU hint -->
+    <div class="menu-hint" aria-hidden="true">MENU</div>
 
     <!-- Sticky Filter Sidebar (shared across all sections) -->
     <aside id="global-filters" class="hidden">
@@ -100,7 +102,7 @@
             Visualizing 70 years of global flight incidents.
           </p>
           <footer>by António Simões & Miguel Gambão</footer>
-          <div class="scroll-hint">Hover top for nav</div>
+          <!-- Removed scroll-hint; MENU hint handled globally at top -->
         </div>
       </section>
 
@@ -109,7 +111,12 @@
         <div class="content-box">
           <h2>Where is the sky most dangerous?</h2>
           <p>
-            In this project we explore the data behind 4,000+ flight incidents from 1940 to 2009. From visualizing the global spread of crash sites to tracking historical safety trends, this dashboard connects the dots between location, time, and the weather patterns that shape aviation disasters.          </p>
+            In this project we explore the data behind 4,000+ flight incidents
+            from 1940 to 2009. From visualizing the global spread of crash sites
+            to tracking historical safety trends, this dashboard connects the
+            dots between location, time, and the weather patterns that shape
+            aviation disasters.
+          </p>
         </div>
       </section>
 
@@ -183,6 +190,6 @@
     <script src="js/map-section.js"></script>
     <script src="js/graphs-section.js"></script>
     <script src="js/filter-dropdown.js"></script>
-    <script src="js/scroll-hint.js"></script>
+    <script src="js/menu-hint.js"></script>
   </body>
 </html>
