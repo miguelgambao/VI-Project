@@ -1,0 +1,78 @@
+/* Map section styles */
+#map {
+  height: 100vh;
+  max-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+  padding: 1.2vmin;
+  padding-top: 1.2vmin;
+  padding-right: calc(22% + 2.4vmin);
+  box-sizing: border-box;
+  overflow: hidden;
+  position: relative;
+}
+
+#map .section-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+}
+
+#map .section-main {
+  width: 100%;
+  height: 100%;
+  background: #111;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+#map-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: default;
+  background: #111;
+}
+
+#map-svg.grabbing {
+  cursor: grabbing !important;
+}
+
+/* Map toggle button */
+.routeToggle {
+  position: absolute;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  z-index: 100;
+  background: none;
+  color: #fff;
+  border: 0.125rem solid rgba(255, 255, 255, 0.9);
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.3);
+}
+
+.routeToggle:hover {
+  background: rgba(218, 34, 34, 0.95);
+  border-color: rgba(218, 34, 34, 0.95);
+}
+
+/* Map styling from original map.css */
+.dot {
+  fill: rgb(218, 34, 34);
+}
+
+.dot:hover {
+  cursor: pointer;
+}
+
+.country {
+  fill: #222;
+  stroke-width: 0.2px;
+  stroke: #444;
+}

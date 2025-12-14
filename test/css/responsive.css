@@ -1,0 +1,44 @@
+/* Responsive adjustments */
+@media (max-width: 75rem) {
+  #global-filters {
+    width: 18rem;
+  }
+
+  #map,
+  #graphs {
+    padding-right: calc(18rem + 3%);
+  }
+}
+
+@media (max-width: 51.25rem) {
+  #global-filters {
+    position: static;
+    width: 100%;
+    min-width: auto;
+    max-width: none;
+    height: auto;
+    flex-direction: column;
+    margin: 0 auto 1.25rem;
+    transform: none;
+    opacity: 1;
+    pointer-events: auto;
+    overflow-y: visible;
+  }
+
+  #global-filters.hidden {
+    display: none;
+  }
+
+  #map,
+  #graphs {
+    padding-right: 1.2vmin;
+  }
+
+  main {
+    padding-top: 0;
+  }
+
+  .main-nav {
+    flex-wrap: wrap;
+  }
+}

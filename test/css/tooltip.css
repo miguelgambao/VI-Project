@@ -1,0 +1,36 @@
+/* Tooltip */
+.tooltip {
+  position: absolute;
+  display: none;
+  background: rgba(0, 0, 0, 0.95);
+  color: #fff;
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  max-width: 21.875rem;
+  pointer-events: none;
+  z-index: 10000;
+  box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.5);
+}
+
+.tooltip .k {
+  font-weight: 700;
+  color: #e85555;
+}
+
+/* Graph tooltip - separate from map tooltip to avoid conflicts */
+.graph-tooltip {
+  position: absolute;
+  display: none;
+  background: rgba(0, 0, 0, 0.95);
+  color: #fff;
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  max-width: 21.875rem;
+  pointer-events: none;
+  z-index: 10000;
+  box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.5);
+}
