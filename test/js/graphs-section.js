@@ -185,7 +185,7 @@ const GraphsSection = {
             .attr('stroke', '#e85555')
             .attr('stroke-width', 1)
             .on('mouseenter', (event, d) => {
-                const tt = d3.select('body').append('div').attr('class', 'tooltip').style('display', 'block');
+                const tt = d3.select('body').append('div').attr('class', 'graph-tooltip').style('display', 'block');
                 if (this.currentAxis === 'crashes') {
                     tt.html(`<div><strong>${d.year}</strong></div><div>${d.value} crashes</div>`)
                         .style('left', (event.pageX + 10) + 'px').style('top', (event.pageY + 10) + 'px');
@@ -194,7 +194,7 @@ const GraphsSection = {
                         .style('left', (event.pageX + 10) + 'px').style('top', (event.pageY + 10) + 'px');
                 }
             })
-            .on('mouseleave', () => { d3.selectAll('body .tooltip').remove(); });
+            .on('mouseleave', () => { d3.selectAll('.graph-tooltip').remove(); });
 
         // Axes
         const range = SharedFilters.state.yearEnd - SharedFilters.state.yearStart;
@@ -255,11 +255,11 @@ const GraphsSection = {
             .attr('height', d => innerH - y(d.value))
             .attr('fill', '#e14242')
             .on('mouseenter', (event, d) => {
-                const tt = d3.select('body').append('div').attr('class', 'tooltip').style('display', 'block');
+                const tt = d3.select('body').append('div').attr('class', 'graph-tooltip').style('display', 'block');
                 tt.html(`<div><strong>${d.year}</strong></div><div>${d.value} ${this.currentAxis === 'crashes' ? 'crashes' : 'fatalities'}</div>`)
                     .style('left', (event.pageX + 10) + 'px').style('top', (event.pageY + 10) + 'px');
             })
-            .on('mouseleave', () => { d3.selectAll('body .tooltip').remove(); });
+            .on('mouseleave', () => { d3.selectAll('.graph-tooltip').remove(); });
 
         // Axes
         g.append('g')
