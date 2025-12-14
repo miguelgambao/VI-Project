@@ -21,6 +21,7 @@ const GraphsSection = {
         // Axis type buttons (Crashes / Fatalities)
         document.querySelectorAll('.axisTypeBtn').forEach(btn => {
             btn.addEventListener('click', (e) => {
+                if (e.target.classList.contains('disabled')) return;
                 document.querySelectorAll('.axisTypeBtn').forEach(b => b.classList.remove('active'));
                 e.target.classList.add('active');
                 this.currentAxis = e.target.dataset.type;
@@ -56,21 +57,32 @@ const GraphsSection = {
         const yearsBtn = document.querySelector('.bottomAxisBtn[data-type="years"]');
         const axisTypeBtns = document.querySelectorAll('.axisTypeBtn');
 
+        const setButtonDisabled = (btn, disabled) => {
+            if (!btn) return;
+            if (disabled) {
+                btn.classList.add('disabled');
+                btn.disabled = true;
+            } else {
+                btn.classList.remove('disabled');
+                btn.disabled = false;
+            }
+        };
+
         if (this.currentChart === 'scatter-matrix') {
             // Disable all control buttons for scatter matrix
-            weatherBtn?.classList.add('disabled');
-            yearsBtn?.classList.add('disabled');
-            axisTypeBtns.forEach(btn => btn.classList.add('disabled'));
+            setButtonDisabled(weatherBtn, true);
+            setButtonDisabled(yearsBtn, true);
+            axisTypeBtns.forEach(btn => setButtonDisabled(btn, true));
         } else if (this.currentChart === 'bar') {
             // Enable weather button for bar chart
-            weatherBtn?.classList.remove('disabled');
-            yearsBtn?.classList.remove('disabled');
-            axisTypeBtns.forEach(btn => btn.classList.remove('disabled'));
+            setButtonDisabled(weatherBtn, false);
+            setButtonDisabled(yearsBtn, false);
+            axisTypeBtns.forEach(btn => setButtonDisabled(btn, false));
         } else {
             // Line chart: disable weather, enable years
-            weatherBtn?.classList.add('disabled');
-            yearsBtn?.classList.remove('disabled');
-            axisTypeBtns.forEach(btn => btn.classList.remove('disabled'));
+            setButtonDisabled(weatherBtn, true);
+            setButtonDisabled(yearsBtn, false);
+            axisTypeBtns.forEach(btn => setButtonDisabled(btn, false));
             if (this.currentBottomAxis === 'weather') {
                 this.currentBottomAxis = 'years';
                 yearsBtn?.classList.add('active');
@@ -171,7 +183,18 @@ const GraphsSection = {
             .attr('r', 3)
             .attr('fill', '#fff')
             .attr('stroke', '#e85555')
-            .attr('stroke-width', 1);
+            .attr('stroke-width', 1)
+            .on('mouseenter', (event, d) => {
+                const tt = d3.select('body').append('div').attr('class', 'tooltip').style('display', 'block');
+                if (this.currentAxis === 'crashes') {
+                    tt.html(`<div><strong>${d.year}</strong></div><div>${d.value} crashes</div>`)
+                        .style('left', (event.pageX + 10) + 'px').style('top', (event.pageY + 10) + 'px');
+                } else {
+                    tt.html(`<div><strong>${d.year}</strong></div><div>${d.value} fatalities</div>`)
+                        .style('left', (event.pageX + 10) + 'px').style('top', (event.pageY + 10) + 'px');
+                }
+            })
+            .on('mouseleave', () => { d3.selectAll('body .tooltip').remove(); });
 
         // Axes
         const range = SharedFilters.state.yearEnd - SharedFilters.state.yearStart;
@@ -225,7 +248,13 @@ const GraphsSection = {
             .attr('y', d => y(d.value))
             .attr('width', x.bandwidth())
             .attr('height', d => innerH - y(d.value))
-            .attr('fill', '#e14242');
+            .attr('fill', '#e14242')
+            .on('mouseenter', (event, d) => {
+                const tt = d3.select('body').append('div').attr('class', 'tooltip').style('display', 'block');
+                tt.html(`<div><strong>${d.year}</strong></div><div>${d.value} ${this.currentAxis === 'crashes' ? 'crashes' : 'fatalities'}</div>`)
+                    .style('left', (event.pageX + 10) + 'px').style('top', (event.pageY + 10) + 'px');
+            })
+            .on('mouseleave', () => { d3.selectAll('body .tooltip').remove(); });
 
         // Axes
         g.append('g')
