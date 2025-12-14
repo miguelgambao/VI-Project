@@ -1,0 +1,53 @@
+/* Centered hover navigation overlay */
+#nav-hover-zone {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: clamp(12rem, 25vw, 26rem);
+  height: 3rem;
+  z-index: 1000;
+  background: transparent;
+  pointer-events: auto;
+}
+
+.main-nav {
+  position: fixed;
+  top: 0.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1100;
+  background: rgba(13, 13, 13, 0.85);
+  backdrop-filter: blur(8px);
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  gap: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.main-nav a {
+  color: #fff;
+  text-decoration: none;
+  padding: 0.375rem 0.875rem;
+  border: 0.125rem solid rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.main-nav a:hover,
+.main-nav a.active {
+  background: rgba(218, 34, 34, 0.95);
+  border-color: rgba(218, 34, 34, 0.95);
+}
+
+/* Reveal rules: show nav when hovering zone or nav */
+#nav-hover-zone:hover ~ .main-nav,
+.main-nav:hover {
+  opacity: 1;
+  pointer-events: auto;
+}

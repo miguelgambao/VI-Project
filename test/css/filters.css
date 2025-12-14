@@ -1,0 +1,282 @@
+/* Sticky filter sidebar (shared across all sections) */
+#global-filters {
+  position: fixed;
+  right: 1.2%;
+  top: 1.2%;
+  bottom: 1.2%;
+  width: 22%;
+  min-width: 16rem;
+  max-width: 24rem;
+  background: #2c2c2c;
+  padding: 1.5rem;
+  z-index: 100;
+  box-shadow: -0.125rem 0 0.625rem rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  overflow-y: auto;
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  border-radius: 0.5rem;
+}
+
+/* Hide filter scrollbar while keeping scroll */
+#global-filters {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+#global-filters::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide filters until after About section (fade/slide in) */
+#global-filters.hidden {
+  opacity: 0;
+  transform: translateX(1rem);
+  pointer-events: none;
+}
+
+/* Filter controls styling */
+.countBlock {
+  width: 100%;
+  text-align: center;
+  margin-bottom: 1.25rem;
+}
+
+.countDisplay {
+  padding-top: 0.625rem;
+  font-size: 4rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.countLabel {
+  font-size: 1rem;
+  color: #ffffff;
+  margin-bottom: 0.625rem;
+}
+
+.sliderBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 1.25rem;
+}
+
+.sliderTitle {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #fff;
+  margin-bottom: 0.375rem;
+}
+
+.sliderValue {
+  font-size: 0.9rem;
+  color: #ffffff;
+  margin-bottom: 0.5rem;
+}
+
+.sliderWrapper {
+  position: relative;
+  width: 100%;
+  max-width: 18.75rem;
+  height: 1.75rem;
+}
+
+.sliderTrack {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 0.5rem;
+  background: #444;
+  border-radius: 0.25rem;
+  transform: translateY(-50%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.sliderRange {
+  position: absolute;
+  top: 50%;
+  height: 0.5rem;
+  background: #f00;
+  border-radius: 0.25rem;
+  transform: translateY(-50%);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.sliderWrapper input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  -moz-appearance: none;
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 0.5rem;
+  background: transparent;
+  transform: translateY(-50%);
+  pointer-events: all;
+  margin: 0;
+  padding: 0;
+  z-index: 3;
+}
+
+.sliderWrapper input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  pointer-events: all;
+  width: 1rem;
+  height: 1rem;
+  background: #fff;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  position: relative;
+  z-index: 3;
+}
+
+.sliderWrapper input[type="range"]::-moz-range-thumb {
+  width: 1rem;
+  height: 1rem;
+  background: #fff;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  position: relative;
+  z-index: 3;
+}
+
+.conditionsContainer {
+  width: 100%;
+  max-width: 18.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.375rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  padding-bottom: 6.25rem;
+}
+
+.conditionsList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.condLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 0.375rem 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.82rem;
+  color: #ffffff;
+}
+
+.condLabel input[type="checkbox"] {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 1.875rem;
+  background: rgb(255, 255, 255);
+  border: 0.1875rem solid rgba(255, 255, 255, 0.95);
+  display: inline-block;
+  vertical-align: middle;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.condLabel input[type="checkbox"]:checked {
+  background: rgba(255, 60, 60, 0.95);
+  border-color: rgba(255, 60, 60, 0.95);
+  box-shadow: inset 0 -0.125rem rgba(0, 0, 0, 0.12);
+}
+
+/* Filter toggle button (for dropdown mode) */
+#filterToggleBtn {
+  position: fixed;
+  right: 1.2%;
+  bottom: 1.2%;
+  z-index: 95;
+  background: rgba(44, 44, 44, 0.9);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: none;
+}
+
+#filterToggleBtn:hover {
+  background: rgba(218, 34, 34, 0.9);
+  border-color: rgba(218, 34, 34, 0.9);
+}
+
+/* Dropdown mode: filters slide in from right */
+#global-filters.dropdown-mode {
+  position: fixed;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 75vw;
+  max-width: 20rem;
+  border-radius: 0;
+  height: 100vh;
+  transform: translateX(100%);
+  opacity: 1;
+  pointer-events: none;
+  transition: transform 0.3s ease;
+}
+
+#global-filters.dropdown-mode.open {
+  transform: translateX(0);
+  pointer-events: auto;
+  z-index: 101;
+}
+
+/* Responsive breakpoint for filter dropdown */
+@media (max-width: 768px) {
+  #global-filters {
+    position: fixed;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 75vw;
+    max-width: 20rem;
+    border-radius: 0;
+    height: 100vh;
+    transform: translateX(100%);
+    opacity: 1;
+    pointer-events: none;
+    transition: transform 0.3s ease;
+  }
+
+  #global-filters.hidden {
+    opacity: 1;
+    pointer-events: none;
+    transform: translateX(100%);
+  }
+
+  #global-filters.open {
+    transform: translateX(0);
+    pointer-events: auto;
+    z-index: 101;
+  }
+
+  #filterToggleBtn {
+    display: block;
+  }
+}
