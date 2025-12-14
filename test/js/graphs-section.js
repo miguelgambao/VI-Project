@@ -229,13 +229,18 @@ const GraphsSection = {
             .range([0, innerW])
             .padding(0.15);
 
-        let maxValue = 1;
-        if (this.currentAxis === 'crashes') {
-            const allCounts = Array.from(d3.rollup(SharedFilters.data, v => v.length, d => d.year).values());
-            maxValue = d3.max(allCounts) || 1;
-        } else {
-            const allFatal = Array.from(d3.rollup(SharedFilters.data, v => d3.sum(v, d => d.fatal || 0), d => d.year).values());
-            maxValue = d3.max(allFatal) || 1;
+        // Calculate max value from actual items or all data for consistent scale
+        let maxValue = d3.max(items, d => d.value) || 1;
+        
+        // For years-based view, use global max for consistent scale
+        if (this.currentBottomAxis === 'years') {
+            if (this.currentAxis === 'crashes') {
+                const allCounts = Array.from(d3.rollup(SharedFilters.data, v => v.length, d => d.year).values());
+                maxValue = Math.max(maxValue, d3.max(allCounts) || 1);
+            } else {
+                const allFatal = Array.from(d3.rollup(SharedFilters.data, v => d3.sum(v, d => d.fatal || 0), d => d.year).values());
+                maxValue = Math.max(maxValue, d3.max(allFatal) || 1);
+            }
         }
 
         const y = d3.scaleLinear().domain([0, maxValue]).range([innerH, 0]);
