@@ -115,7 +115,7 @@ const SharedFilters = {
     async init() {
         try {
             // Load CSV data
-            const crashData = await d3.dsv(";", "../data/crashesFinal.csv");
+            const crashData = await d3.dsv(";", "data/crashesFinal.csv");
 
             // Detect columns
             const keys = Object.keys(crashData[0]);

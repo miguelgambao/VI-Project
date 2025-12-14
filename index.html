@@ -1,85 +1,195 @@
 <!DOCTYPE html>
-
 <html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<title>Plane Crash Data Visualization</title>
-		<script src="https://d3js.org/d3.v7.min.js"></script>
-		<script src="https://cdn.jsdelivr.net/npm/topojson@3"></script>
-		<link rel="stylesheet" href="css/map.css" />
-        <link rel="stylesheet" href="css/nav.css" />
-	</head>
-	<body>
-		<div class="app">
-			<div id="mapWrap" class="mapWrap">
-				<svg></svg>
-				<button
-					id="toggleRoutesBtn"
-					class="routeToggle"
-					title="Show/Hide route lines"
-				>
-					Hide routes
-				</button>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aviation Crash Data Explorer</title>
 
-				<!-- top-right navigation buttons -->
-				<nav class="topNav" aria-label="Primary">
-					<img src="crash logo.svg" alt="Logo" class="navLogo" />
-					<a class="navBtn active" href="index.html">Map</a>
-					<a class="navBtn" href="html/graphs.html">Graphs</a>
-					<a class="navBtn" href="html/about.html">About</a>
-				</nav>
-			</div>
-			<div id="controls">
-				<div class="countBlock">
-					<div id="countDisplay" class="countDisplay">0</div>
-					<div class="countLabel">Crashes found</div>
-				</div>
-				<div id="sliderContainer" class="sliderBlock">
-					<div class="sliderTitle">Year Range</div>
-					<div class="sliderValue" id="yearLabel">1940 - 2009</div>
-					<div id="sliderWrapper" class="sliderWrapper">
-						<div id="sliderTrack"></div>
-						<div id="sliderRange"></div>
-						<input
-							id="startYear"
-							type="range"
-							min="1940"
-							max="2009"
-							value="1940"
-						/>
-						<input
-							id="endYear"
-							type="range"
-							min="1940"
-							max="2009"
-							value="2009"
-						/>
-					</div>
-				</div>
+    <!-- External Libraries -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://unpkg.com/topojson@3"></script>
 
-				<div id="sliderContainerAboard" class="sliderBlock">
-					<div class="sliderTitle">Aboard</div>
-					<div class="sliderValue" id="aboardLabel">—</div>
-					<div id="sliderWrapperAboard" class="sliderWrapper">
-						<div class="sliderTrack"></div>
-						<div class="sliderRange" id="sliderRangeAboard"></div>
-						<input id="startAboard" type="range" min="0" max="100" value="0" />
-						<input id="endAboard" type="range" min="0" max="100" value="100" />
-					</div>
-				</div>
-				<div id="sliderContainerFatal" class="sliderBlock">
-					<div class="sliderTitle">Fatalities (%)</div>
-					<div class="sliderValue" id="fatalLabel">—</div>
-					<div id="sliderWrapperFatal" class="sliderWrapper">
-						<div class="sliderTrack"></div>
-						<div class="sliderRange" id="sliderRangeFatal"></div>
-						<input id="startFatal" type="range" min="0" max="100" value="0" />
-						<input id="endFatal" type="range" min="0" max="100" value="100" />
-					</div>
-				</div>
-				<div id="conditionsContainer" class="conditionsContainer"></div>
-			</div>
-		</div>
-		<script src="js/mapfilter.js"></script>
-	</body>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&family=Lora:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Modular CSS Files -->
+    <link rel="stylesheet" href="css/base.css" />
+    <link rel="stylesheet" href="css/navigation.css" />
+    <link rel="stylesheet" href="css/about.css" />
+    <link rel="stylesheet" href="css/filters.css" />
+    <link rel="stylesheet" href="css/map-section.css" />
+    <link rel="stylesheet" href="css/graphs-section.css" />
+    <link rel="stylesheet" href="css/tooltip.css" />
+    <link rel="stylesheet" href="css/responsive.css" />
+  </head>
+  <body>
+    <!-- Hover zone to reveal nav -->
+    <div id="nav-hover-zone" aria-hidden="true"></div>
+    <!-- Centered hover navigation -->
+    <nav class="main-nav">
+      <a href="#home" class="active">Home</a>
+      <a href="#about">About</a>
+      <a href="#map">Map</a>
+      <a href="#graphs">Graphs</a>
+    </nav>
+    <!-- Subtle MENU hint -->
+    <div class="menu-hint" aria-hidden="true">MENU</div>
+
+    <!-- Sticky Filter Sidebar (shared across all sections) -->
+    <aside id="global-filters" class="hidden">
+      <div class="countBlock">
+        <div id="countDisplay" class="countDisplay">0</div>
+        <div class="countLabel">Crashes found</div>
+      </div>
+
+      <div class="sliderBlock">
+        <div class="sliderTitle">Year Range</div>
+        <div class="sliderValue" id="yearLabel">1940 - 2009</div>
+        <div id="sliderWrapper" class="sliderWrapper">
+          <div class="sliderTrack"></div>
+          <div id="sliderRange" class="sliderRange"></div>
+          <input
+            id="startYear"
+            type="range"
+            min="1940"
+            max="2009"
+            value="1940"
+          />
+          <input id="endYear" type="range" min="1940" max="2009" value="2009" />
+        </div>
+      </div>
+
+      <div class="sliderBlock">
+        <div class="sliderTitle">Aboard</div>
+        <div class="sliderValue" id="aboardLabel">—</div>
+        <div id="sliderWrapperAboard" class="sliderWrapper">
+          <div class="sliderTrack"></div>
+          <div class="sliderRange" id="sliderRangeAboard"></div>
+          <input id="startAboard" type="range" min="0" max="100" value="0" />
+          <input id="endAboard" type="range" min="0" max="100" value="100" />
+        </div>
+      </div>
+
+      <div class="sliderBlock">
+        <div class="sliderTitle">Fatalities (%)</div>
+        <div class="sliderValue" id="fatalLabel">—</div>
+        <div id="sliderWrapperFatal" class="sliderWrapper">
+          <div class="sliderTrack"></div>
+          <div class="sliderRange" id="sliderRangeFatal"></div>
+          <input id="startFatal" type="range" min="0" max="100" value="0" />
+          <input id="endFatal" type="range" min="0" max="100" value="100" />
+        </div>
+      </div>
+
+      <div class="conditionsContainer">
+        <div class="sliderTitle">Weather Conditions</div>
+        <div id="conditionsList" class="conditionsList"></div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main>
+      <!-- HOME SECTION -->
+      <section id="home">
+        <div class="hero-section">
+          <h1>AVIATION ARCHIVE</h1>
+          <p class="subtitle">
+            Visualizing 70 years of global flight incidents.
+          </p>
+          <footer>by António Simões & Miguel Gambão</footer>
+          <!-- Removed scroll-hint; MENU hint handled globally at top -->
+        </div>
+      </section>
+
+      <!-- ABOUT SECTION -->
+      <section id="about" class="content-section">
+        <div class="content-box">
+          <h2>Where is the sky most dangerous?</h2>
+          <p>
+            In this project we explore the data behind 4,000+ flight incidents
+            from 1940 to 2009. From visualizing the global spread of crash sites
+            to tracking historical safety trends, this dashboard connects the
+            dots between location, time, and the weather patterns that shape
+            aviation disasters.
+          </p>
+        </div>
+      </section>
+
+      <!-- MAP SECTION -->
+      <section id="map">
+        <div class="section-container">
+          <div class="section-main">
+            <svg id="map-svg"></svg>
+            <button id="toggleRoutesBtn" class="routeToggle">
+              Hide routes
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- GRAPHS SECTION -->
+      <section id="graphs">
+        <div class="section-container">
+          <div class="section-main">
+            <div id="graphs-container">
+              <div id="chart-box">
+                <svg id="chart-svg"></svg>
+                <div class="chartControlsRow">
+                  <div class="axisTypeControls">
+                    <div class="axisTypeLabel">Left axis:</div>
+                    <button class="axisTypeBtn active" data-type="crashes">
+                      Crashes
+                    </button>
+                    <button class="axisTypeBtn" data-type="fatalities">
+                      Fatalities
+                    </button>
+                  </div>
+                  <div class="bottomAxisControls">
+                    <div class="bottomAxisLabel">Bottom axis:</div>
+                    <button class="bottomAxisBtn active" data-type="years">
+                      Years
+                    </button>
+                    <button class="bottomAxisBtn disabled" data-type="weather">
+                      Weather Conditions
+                    </button>
+                  </div>
+                  <div class="chartTypeControls">
+                    <div class="chartTypeLabel">Graph type:</div>
+                    <button class="chartTypeBtn active" data-type="line">
+                      Line
+                    </button>
+                    <button class="chartTypeBtn" data-type="bar">
+                      Bar (Ordered)
+                    </button>
+                    <button class="chartTypeBtn" data-type="scatter-matrix">
+                      Scatter Matrix
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Tooltip -->
+    <div class="tooltip" id="tooltip"></div>
+
+    <!-- Filter toggle button -->
+    <button id="filterToggleBtn">Filters</button>
+
+    <!-- Modular JavaScript Files -->
+    <script src="js/navigation.js"></script>
+    <script src="js/shared-filters.js"></script>
+    <script src="js/map-section.js"></script>
+    <script src="js/graphs-section.js"></script>
+    <script src="js/filter-dropdown.js"></script>
+    <script src="js/menu-hint.js"></script>
+  </body>
 </html>
